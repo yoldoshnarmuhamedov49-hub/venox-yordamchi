@@ -1,7 +1,8 @@
-# Venox Yordamchi — Inline Telegram Bot Constructor
+# Venox Yordamchi — Telegram Bot Constructor + GitHub Pages Mini App
 
-A lightning-fast Telegram bot: every feature runs through rich inline keyboards
-inside Telegram. No web server, no external page, no loading screens.
+A lightning-fast long-polling Telegram bot with rich inline keyboards, plus an
+optional static dashboard served instantly by GitHub Pages (no Render sleep
+screens). The bot hosts no HTTP server.
 
 ## Features
 
@@ -11,7 +12,8 @@ inside Telegram. No web server, no external page, no loading screens.
 - **Tiers** — Free (0 UZS), Standart (**60,000 UZS** / 30 days), Ultra Pro (150,000 UZS / 90 days).
 - **Payments** — card `5614 6830 1549 1525`; the user sends a receipt screenshot, the admin approves/rejects it and the tier activates automatically.
 - **Admin** — ID `8527026238` (@THE_VENOX) has permanent Ultra Pro/VIP with unlimited access, plus receipt review, broadcast and VIP grants.
-- **Instant** — pure long polling; no HTTP server, no Render cold-start spinner.
+- **Instant** — pure long polling; no bot HTTP server, no Render cold-start spinner. The **🚀 Ochish (Mini App)** button opens the static dashboard from GitHub Pages: `https://yoldoshnarmuhamedov49-hub.github.io/venox-yordamchi/`.
+- **Mini App orders** — template picks, plan selections and custom requests are sent back to the bot with `Telegram.WebApp.sendData()` and handled in `web_app_data_handler`.
 
 ## Local run
 
@@ -36,6 +38,14 @@ committed.
 3. Set `BOT_TOKEN` in the worker environment.
 4. For persistent data across redeploys, attach a Render Persistent Disk and
    point `DATABASE_PATH` at a file on it (e.g. `/data/venox.db`).
+
+## GitHub Pages dashboard
+
+`index.html` is a fully static, self-contained dashboard (192 embedded templates,
+pricing, card details, request form) served from the repository root. Enable
+Pages with **Settings → Pages → Source: Deploy from a branch → main / root**, or
+let the `actions/deploy-pages` workflow publish it. `.nojekyll` keeps the root
+deployment simple.
 
 ## GitHub integration
 

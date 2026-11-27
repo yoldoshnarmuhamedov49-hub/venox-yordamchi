@@ -25,6 +25,7 @@ from telegram import (
     InputFile,
     ReplyKeyboardMarkup,
     Update,
+    WebAppInfo,
 )
 from telegram.constants import ParseMode
 from telegram.ext import (
@@ -64,7 +65,11 @@ A_BROADCAST, A_GRANT = range(10, 12)
 R_NAME, R_CONTACT, R_DESC = range(20, 23)
 BUILD_STATE: Dict[str, Any] = {}
 REQUEST_STATE: Dict[int, Dict[str, str]] = {}
-BUILD_ID = os.getenv("BUILD_ID", "2026-11-28.1")
+BUILD_ID = os.getenv("BUILD_ID", "2026-11-28.2")
+GITHUB_PAGES_URL = os.getenv(
+    "GITHUB_PAGES_URL",
+    "https://yoldoshnarmuhamedov49-hub.github.io/venox-yordamchi/",
+).strip()
 
 # --------------------------------------------------------------------------- #
 # Small helpers
@@ -102,6 +107,11 @@ def reply_main_keyboard() -> ReplyKeyboardMarkup:
 
 def main_menu_keyboard(user_id: int) -> InlineKeyboardMarkup:
     rows = [
+        [
+            InlineKeyboardButton(
+                "🚀 Ochish (Mini App)", web_app=WebAppInfo(url=GITHUB_PAGES_URL)
+            )
+        ],
         [
             InlineKeyboardButton(
                 f"🏪 Botlar kutubxonasi ({db.template_count()})", callback_data="catalog"
@@ -384,7 +394,8 @@ def build_view(user_id: int, view: str, payload: str = "") -> Tuple[str, Optiona
             "• <b>🛠 Buyurtma</b> — noyob botni bizga buyurtma qilish.\n"
             "• <b>📦 Botlarim</b> — botlarni boshqarish va JSON yuklab olish.\n"
             "• <b>💳 Tariflar</b> — Free, Standart (60,000 UZS) va Ultra Pro (150,000 UZS).\n"
-            "• <b>📊 Limitim</b> — cheklovlar va statistika.\n\n"
+            "• <b>📊 Limitim</b> — cheklovlar va statistika.\n"
+            "• <b>🚀 Ochish</b> — GitHub Pages dagi Mini App dashboard (tezkor, uxlamaydi).\n\n"
             "Buyruqlar: /start, /menu, /build, /request, /plans, /usage, /admin\n"
             f"Yordam va to'lov bo'yicha savollar: @{esc(ADMIN_USERNAME)}"
         )
@@ -1081,6 +1092,92 @@ async def request_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     return ConversationHandler.END
 
 
+# --------------------------------------------------------------------------- #
+# GitHub Pages Web Mini App orders
+# --------------------------------------------------------------------------- #
+async def web_app_data_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Process orders submitted through the static GitHub Pages dashboard."""
+    user = update.effective_user
+    db.ensure_user(user.id, user.username, user.first_name)
+    try:
+        payload = json.loads(update.message.web_app_data.data or "{}")
+    except ValueError:
+        payload = {}
+    action = payload.get("action")
+
+    if action == "template":
+        key = str(payload.get("key", ""))
+        template = db.get_template(key)
+        if not template:
+            await update.message.reply_text("❌ Shablon topilmadi.")
+            return
+        limits = db.limits(user.id)
+        if template["is_premium"] and not limits["premium_templates"]:
+            await update.message.reply_text(
+                "👑 Bu Premium shablon. Standart yoki Ultra Pro uchun /plans",
+                reply_markup=main_menu_keyboard(user.id),
+            )
+            return
+        if not check_limit(limits["bots"], db.count_bots(user.id)):
+            await update.message.reply_text("🤖 Botlar limitiga yetdingiz. /plans")
+            return
+        config = dict(template["config"])
+        config["source_template"] = key
+        created = db.create_bot(
+            user.id, template["name"], config, template_key=key, source="template"
+        )
+        text, markup = build_view(user.id, "bot", str(created["id"]))
+        await update.message.reply_text(text=text, reply_markup=markup, parse_mode=ParseMode.HTML)
+        return
+
+    if action == "plan":
+        tier = str(payload.get("tier", ""))
+        if tier not in PLANS:
+            await update.message.reply_text("❌ Tarif topilmadi.")
+            return
+        if tier == FREE:
+            await update.message.reply_text(
+                "🆓 Free bepul. /build bilan bot yaratishingiz mumkin.",
+                reply_markup=main_menu_keyboard(user.id),
+            )
+            return
+        text, markup = build_view(user.id, "pay", tier)
+        await update.message.reply_text(text=text, reply_markup=markup, parse_mode=ParseMode.HTML)
+        return
+
+    if action == "custom_request":
+        name = str(payload.get("name", "")).strip()
+        contact = str(payload.get("contact", "")).strip()
+        description = str(payload.get("description", "")).strip()
+        kind = str(payload.get("type", "")).strip() or "Custom"
+        deadline = str(payload.get("deadline", "")).strip() or "Muhokama qilamiz"
+        if not name or not contact or not description:
+            await update.message.reply_text("❌ Buyurtma ma'lumotlari to'liq emas.")
+            return
+        admin_text = (
+            "🛠 <b>Yangi bot buyurtmasi (Mini App)</b>\n"
+            f"👤 Mijoz: {esc(user.first_name)} (@{esc(user.username or 'yo‘q')}, {user.id})\n"
+            f"📌 Nomi: {esc(name)}\n"
+            f"🔧 Turi: {esc(kind)}\n"
+            f"⏰ Muddat: {esc(deadline)}\n"
+            f"📞 Aloqa: {esc(contact)}\n\n"
+            f"📝 Tavsif:\n{esc(description)}"
+        )
+        try:
+            await context.bot.send_message(
+                chat_id=ADMIN_ID, text=admin_text, parse_mode=ParseMode.HTML
+            )
+        except Exception as exc:
+            log.error("Could not forward Mini App order: %s", exc)
+        await update.message.reply_text(
+            "✅ Buyurtmangiz adminga yuborildi. Tez orada bog'lanamiz.",
+            reply_markup=main_menu_keyboard(user.id),
+        )
+        return
+
+    await update.message.reply_text("Mini App ma'lumoti qabul qilindi.")
+
+
 async def receipt_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     """Handle a receipt when the user is in the payment flow. Returns handled flag."""
     payment_id = context.user_data.get("await_receipt")
@@ -1277,8 +1374,13 @@ def build_application() -> Application:
     application.add_handler(CommandHandler("plans", plans_command))
     application.add_handler(CommandHandler("usage", usage_command))
     application.add_handler(CommandHandler("admin", admin_command))
+    application.add_handler(
+        MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data_handler)
+    )
     application.add_handler(CallbackQueryHandler(callback_router))
-    application.add_handler(MessageHandler(filters.ALL, text_handler))
+    application.add_handler(
+        MessageHandler(filters.ALL & ~filters.StatusUpdate.WEB_APP_DATA, text_handler)
+    )
     return application
 
 
