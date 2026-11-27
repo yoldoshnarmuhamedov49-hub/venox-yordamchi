@@ -93,6 +93,19 @@
   .ok-msg{display:none;padding:12px;border-radius:12px;background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok);font-size:12px;font-weight:600}
   .ok-msg.on{display:block}
   footer{text-align:center;color:var(--muted);font-size:10px;margin-top:28px;padding-top:16px;border-top:1px solid var(--border)}
+  .overlay{position:fixed;inset:0;z-index:50;background:rgba(2,6,23,.72);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:18px}
+  .overlay.on{display:flex}
+  .modal{width:100%;max-width:440px;max-height:86vh;overflow-y:auto;background:var(--card);border:1px solid var(--border);border-radius:22px;padding:20px;box-shadow:var(--shadow);animation:fade .2s ease}
+  .modal h3{margin:0 0 6px;font-size:18px}
+  .modal .meta{font-size:11px;color:var(--muted);margin-bottom:12px}
+  .modal .desc{font-size:13px;line-height:1.6;margin:10px 0 16px}
+  .modal .price-big{font-size:26px;font-weight:900;letter-spacing:-.6px;margin:4px 0}
+  .modal ul{list-style:none;padding:0;margin:12px 0}
+  .modal li{position:relative;padding-left:20px;font-size:12px;margin:7px 0}
+  .modal li:before{content:"✓";position:absolute;left:0;color:var(--ok);font-weight:900}
+  .modal-actions{display:grid;gap:8px;margin-top:14px}
+  .modal-close{float:right;border:0;background:var(--card2);color:var(--text);width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:15px}
+  .copied{font-size:11px;color:var(--ok);min-height:16px;margin-top:8px}
 </style>
 </head>
 <body>
@@ -167,7 +180,14 @@
     </form></div>
   </section>
 
-  <footer>Venox Yordamchi • 192 bot shabloni • Telegram.WebApp.sendData • @THE_VENOX</footer>
+  <footer>Venox Yordamchi • 192 bot shabloni • Mini App ichida ishlaydi • @THE_VENOX</footer>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal">
+    <button class="modal-close" id="modalClose" type="button">✕</button>
+    <div id="modalBody"></div>
+  </div>
 </div>
 
 <script>
@@ -184,19 +204,81 @@
   }
   if(tg){ tg.expand(); applyTheme(); tg.onEvent('themeChanged',applyTheme); } else applyTheme();
 
+  var CARD = document.getElementById('cardNumber').textContent;
+  var ADMIN = 'THE_VENOX';
   function haptic(){ if(tg&&tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light'); }
-  function send(payload){
-    haptic(); var raw=JSON.stringify(payload);
-    if(tg){ tg.sendData(raw); tg.close(); }
-    else { console.log('WebApp payload:',raw); alert(raw); }
-  }
   function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
   function money(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,' '); }
   function categories(){ var a=['all']; DATA.forEach(function(x){if(a.indexOf(x.category_name)<0)a.push(x.category_name);}); return a; }
 
   document.getElementById('statTpl').textContent=DATA.length;
   document.getElementById('statCat').textContent=categories().length;
-  document.getElementById('cardNumber').textContent='5614 6830 1549 1525';
+
+  function copyText(text){
+    haptic();
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).catch(function(){ fallbackCopy(text); });
+    } else { fallbackCopy(text); }
+  }
+  function fallbackCopy(text){
+    var area=document.createElement('textarea'); area.value=text;
+    area.style.position='fixed'; area.style.opacity='0'; document.body.appendChild(area);
+    area.select();
+    try{ document.execCommand('copy'); }catch(err){}
+    document.body.removeChild(area);
+  }
+  function copied(el,message){
+    copyText(el.getAttribute('data-copy')||'');
+    var note=document.getElementById('copiedNote');
+    if(note){ note.textContent=message||'✅ Nusxalandi — endi bu matnni botga yuboring.'; }
+    el.textContent='✅ Nusxalandi'; var self=el;
+    setTimeout(function(){ self.textContent='📋 Nusxalash'; },1800);
+  }
+
+  var overlay=document.getElementById('overlay');
+  function openModal(html){
+    document.getElementById('modalBody').innerHTML=html+
+      '<div class="copied" id="copiedNote"></div><div class="modal-actions" id="modalActions"></div>';
+    overlay.classList.add('on'); haptic();
+  }
+  function closeModal(){ overlay.classList.remove('on'); }
+  document.getElementById('modalClose').onclick=closeModal;
+  overlay.onclick=function(e){ if(e.target===overlay) closeModal(); };
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeModal(); });
+  function modalButton(label,text){
+    var b=document.createElement('button'); b.className='btn'; b.type='button';
+    b.textContent=label; b.setAttribute('data-copy',text);
+    b.onclick=function(){ copied(this); };
+    document.getElementById('modalActions').appendChild(b);
+  }
+
+  function showTemplate(x){
+    openModal('<h3>'+x.icon+' '+esc(x.name)+'</h3>'+
+      '<div class="meta">'+esc(x.category_name)+' • '+(x.premium?'👑 Premium':'🆓 Bepul')+'</div>'+
+      '<div class="desc">'+esc(x.description)+'</div>'+
+      '<p class="meta">Mini App yopilmaydi. Kodni nusxalab, botga yuboring — u shablon haqida maslahat beradi.</p>');
+    modalButton('📋 Shablon kodini nusxalash', x.key);
+    modalButton('🤖 Maslahat matnini nusxalash', 'Assalomu alaykum, '+x.name+' ('+x.key+') shabloni haqida maslahat bering.');
+  }
+  function showPlan(p){
+    var price=p.price?money(p.price)+' UZS':'Bepul';
+    openModal('<h3>'+p.emoji+' '+esc(p.label)+'</h3>'+
+      '<div class="meta">'+esc(p.description)+(p.days?' • '+p.days+' kun':'')+'</div>'+
+      '<div class="price-big">'+price+'</div><ul>'+
+      p.perks.map(function(v){return '<li>'+esc(v)+'</li>';}).join('')+'</ul>');
+    modalButton('💳 Karta raqamini nusxalash', CARD);
+    if(p.price){ modalButton('🧾 Chek matnini nusxalash', 'Assalomu alaykum, '+p.label+' tarifi uchun '+price+' to\'lov qildim. Chek yuboraman.'); }
+    else { modalButton('🚀 Boshlash uchun /build nusxalash', '/build'); }
+  }
+  function showRequest(payload){
+    openModal('<h3>✅ Buyurtma tayyor</h3>'+
+      '<div class="desc"><b>'+esc(payload.name)+'</b><br>'+esc(payload.type)+' • '+esc(payload.deadline)+'<br>'+
+      'Aloqa: '+esc(payload.contact)+'<br><br>'+esc(payload.description)+'</div>'+
+      '<p class="meta">Matnni nusxalab, Telegram botga yuboring — admin ko\'rib chiqadi.</p>');
+    modalButton('📋 Buyurtma matnini nusxalash',
+      '🛠 Maxsus bot buyurtmasi\nNomi: '+payload.name+'\nTuri: '+payload.type+'\nMuddat: '+payload.deadline+
+      '\nAloqa: '+payload.contact+'\nTavsif: '+payload.description);
+  }
 
   document.querySelectorAll('.tab').forEach(function(tab){
     tab.onclick=function(){
@@ -223,7 +305,7 @@
     list.forEach(function(x,i){ html+='<div class="tpl" data-i="'+i+'"><div class="ic">'+x.icon+'</div><div class="nm">'+esc(x.name)+'</div><div class="ct">'+esc(x.category_name)+'</div><span class="badge'+(x.premium?' p':'')+'">'+(x.premium?'👑 Premium':'🆓 Bepul')+'</span><div class="go">→</div></div>'; });
     var root=document.getElementById('grid'); root.innerHTML=html||'<div class="empty">Hech narsa topilmadi.</div>';
     var cards=root.querySelectorAll('.tpl');
-    for(var i=0;i<cards.length;i++){(function(c){c.onclick=function(){send({action:'template',key:list[parseInt(c.getAttribute('data-i'),10)].key});};})(cards[i]);}
+    for(var i=0;i<cards.length;i++){(function(c){c.onclick=function(){showTemplate(list[parseInt(c.getAttribute('data-i'),10)]);};})(cards[i]);}
   }
   document.getElementById('q').addEventListener('input',function(e){state.q=e.target.value.trim();renderTemplates();});
 
@@ -235,25 +317,23 @@
       html+='<div class="plan'+(p.key==='standart'?' hot':'')+'">'+(p.key==='standart'?'<div class="ribbon">ENG MASHHUR</div>':'')+
         '<div class="pname">'+p.emoji+' '+esc(p.label)+'</div><div class="pdesc">'+esc(p.description)+'</div>'+
         '<div class="price">'+price+(p.days?' <small>/ '+p.days+' kun</small>':'')+'</div><ul>'+perks+'</ul>'+
-        '<button class="btn" data-tier="'+p.key+'" type="button">'+(p.price?'Tarifni tanlash':'Bepul boshlash')+'</button></div>';
+        '<button class="btn" data-tier="'+p.key+'" type="button">'+(p.price?'Batafsil ko\'rish':'Bepul boshlash')+'</button></div>';
     });
     var root=document.getElementById('plans'); root.innerHTML=html;
-    root.querySelectorAll('button[data-tier]').forEach(function(b){b.onclick=function(){send({action:'plan',tier:b.dataset.tier});};});
+    root.querySelectorAll('button[data-tier]').forEach(function(b){b.onclick=function(){showPlan(PRICES.filter(function(p){return p.key===b.dataset.tier;})[0]);};});
   }
-  document.querySelectorAll('button[data-plan]').forEach(function(b){b.onclick=function(){send({action:'plan',tier:b.dataset.plan});};});
+  document.querySelectorAll('button[data-plan]').forEach(function(b){
+    b.onclick=function(){ showPlan(PRICES.filter(function(p){return p.key===b.dataset.plan;})[0]); };
+  });
 
-  document.getElementById('copyCard').onclick=function(){
-    var text=document.getElementById('cardNumber').textContent;
-    if(navigator.clipboard) navigator.clipboard.writeText(text);
-    haptic(); this.textContent='✅ Nusxalandi'; var self=this;
-    setTimeout(function(){self.textContent='📋 Nusxalash';},1600);
-  };
+  document.getElementById('copyCard').onclick=function(){ copied(this,'✅ Karta raqami nusxalandi.'); };
+  document.getElementById('copyCard').setAttribute('data-copy',CARD);
 
   document.getElementById('requestForm').addEventListener('submit',function(e){
     e.preventDefault();
-    var payload={action:'custom_request',name:document.getElementById('fName').value.trim(),contact:document.getElementById('fContact').value.trim(),type:document.getElementById('fType').value,deadline:document.getElementById('fDeadline').value,description:document.getElementById('fDesc').value.trim()};
+    var payload={name:document.getElementById('fName').value.trim(),contact:document.getElementById('fContact').value.trim(),type:document.getElementById('fType').value,deadline:document.getElementById('fDeadline').value,description:document.getElementById('fDesc').value.trim()};
     if(!payload.name||!payload.contact||!payload.description) return;
-    send(payload); document.getElementById('okMsg').classList.add('on'); this.reset();
+    showRequest(payload); document.getElementById('okMsg').classList.add('on'); this.reset();
   });
 
   renderChips(); renderTemplates(); renderPlans();
