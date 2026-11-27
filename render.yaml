@@ -35,6 +35,8 @@ services:
     name: venox-yordamchi-miniapp
     env: python
     region: oregon
+    # "free" sleeps after inactivity (first open shows a wake-up screen).
+    # Use "starter" for an always-on, instantly loading dashboard.
     plan: free
     buildCommand: "pip install -r requirements.txt"
     startCommand: "python bot.py --webapp"

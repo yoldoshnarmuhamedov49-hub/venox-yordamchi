@@ -1239,9 +1239,12 @@ BOT_HTML = """<!doctype html>
 
 
 class MiniAppHandler(BaseHTTPRequestHandler):
+    """Serves index.html and published bot pages without external dependencies."""
+
+    protocol_version = "HTTP/1.1"
     db_store: Database = db
 
-    def do_GET(self) -> None:  # noqa: N802
+    def _render(self) -> Tuple[int, str, str]:
         path = urlparse(self.path).path.rstrip("/") or "/"
         if path in {"/", "/index.html"}:
             data = [
@@ -1278,12 +1281,13 @@ class MiniAppHandler(BaseHTTPRequestHandler):
                 .replace("__CARD__", html.escape(PAYMENT_CARD))
                 .replace("__ADMIN__", html.escape(ADMIN_USERNAME))
             )
-        elif path.startswith("/b/"):
+            return 200, "text/html; charset=utf-8", body
+
+        if path.startswith("/b/"):
             try:
                 bot_id = int(path.split("/")[2])
             except (ValueError, IndexError):
-                self.send_error(404)
-                return
+                return 404, "text/plain; charset=utf-8", "Not found"
             cfg: Optional[Dict[str, Any]] = None
             name = ""
             query = parse_qs(urlparse(self.path).query)
@@ -1298,11 +1302,10 @@ class MiniAppHandler(BaseHTTPRequestHandler):
                 except (ValueError, UnicodeDecodeError) as exc:
                     log.debug("bad mini app token: %s", exc)
             if cfg is None:
-                bot = self.db_store.get_bot(bot_id)
-                if not bot:
-                    self.send_error(404)
-                    return
-                cfg, name = bot["config"], bot["name"]
+                record = self.db_store.get_bot(bot_id)
+                if not record:
+                    return 404, "text/plain; charset=utf-8", "Not found"
+                cfg, name = record["config"], record["name"]
             buttons = "".join(
                 f'<button class="btn" data-label="{html.escape(str(b), quote=True)}">'
                 f"{html.escape(str(b))}</button>"
@@ -1314,40 +1317,64 @@ class MiniAppHandler(BaseHTTPRequestHandler):
                 .replace("__BUTTONS__", buttons)
                 .replace("__ID__", str(bot_id))
             )
-        elif path == "/health":
-            body = json.dumps({"status": "ok", "templates": self.db_store.template_count()})
-        else:
-            self.send_error(404)
-            return
+            return 200, "text/html; charset=utf-8", body
+
+        if path == "/health":
+            payload = json.dumps({"status": "ok", "templates": self.db_store.template_count()})
+            return 200, "application/json; charset=utf-8", payload
+        return 404, "text/plain; charset=utf-8", "Not found"
+
+    def _respond(self, include_body: bool = True) -> None:
+        try:
+            status, content_type, body = self._render()
+        except Exception:
+            log.exception("Mini App render failed for %s", self.path)
+            status, content_type = 500, "text/plain; charset=utf-8"
+            body = "Internal Server Error"
         encoded = body.encode("utf-8")
-        self.send_response(200)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(encoded)))
+        self.send_header("Cache-Control", "no-store")
         self.end_headers()
-        self.wfile.write(encoded)
+        if include_body:
+            self.wfile.write(encoded)
+
+    def do_GET(self) -> None:  # noqa: N802
+        self._respond()
+
+    def do_HEAD(self) -> None:  # noqa: N802
+        self._respond(include_body=False)
 
     def log_message(self, fmt: str, *args: Any) -> None:
         log.info("webapp %s - %s", self.address_string(), fmt % args)
 
 
-def start_webapp() -> ThreadingHTTPServer:
-    """Start the HTTP server in a daemon thread alongside the Telegram bot."""
+def create_webapp_server() -> ThreadingHTTPServer:
     port = int(os.getenv("PORT", "8000"))
     server = ThreadingHTTPServer(("0.0.0.0", port), MiniAppHandler)
-    threading.Thread(
-        target=server.serve_forever, name="venox-miniapp", daemon=True
-    ).start()
     log.info("Web Mini App listening on 0.0.0.0:%s", port)
     return server
 
 
+def start_webapp() -> ThreadingHTTPServer:
+    """Start the HTTP server in a daemon thread alongside the Telegram bot."""
+    server = create_webapp_server()
+    threading.Thread(
+        target=server.serve_forever, name="venox-miniapp", daemon=True
+    ).start()
+    return server
+
+
 def run_webapp() -> None:
-    """HTTP-only mode (optional); default `python bot.py` runs both together."""
-    server = start_webapp()
+    """HTTP-only mode: serve in the main thread so Render sees a live port."""
+    server = create_webapp_server()
     try:
-        threading.Event().wait()
+        server.serve_forever()
     except KeyboardInterrupt:
-        server.shutdown()
+        pass
+    finally:
+        server.server_close()
 
 
 # --------------------------------------------------------------------------- #
@@ -1423,11 +1450,12 @@ def build_application() -> Application:
 
 
 def main() -> None:
-    if not BOT_TOKEN:
-        raise RuntimeError("BOT_TOKEN is not configured.")
+    # The dashboard does not need a Telegram token; check it only for bot mode.
     if "--webapp" in sys.argv[1:]:
         run_webapp()
         return
+    if not BOT_TOKEN:
+        raise RuntimeError("BOT_TOKEN is not configured.")
     start_webapp()
     application = build_application()
     application.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
