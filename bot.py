@@ -64,6 +64,7 @@ A_BROADCAST, A_GRANT = range(10, 12)
 R_NAME, R_CONTACT, R_DESC = range(20, 23)
 BUILD_STATE: Dict[str, Any] = {}
 REQUEST_STATE: Dict[int, Dict[str, str]] = {}
+BUILD_ID = os.getenv("BUILD_ID", "2026-11-28.1")
 
 # --------------------------------------------------------------------------- #
 # Small helpers
@@ -1208,8 +1209,8 @@ async def post_init(application: Application) -> None:
         ]
     )
     log.info(
-        "Venox Yordamchi ready: %s templates, admin %s, card %s",
-        db.template_count(), ADMIN_ID, PAYMENT_CARD,
+        "Venox Yordamchi build %s ready: %s templates, admin %s, card %s",
+        BUILD_ID, db.template_count(), ADMIN_ID, PAYMENT_CARD,
     )
 
 
