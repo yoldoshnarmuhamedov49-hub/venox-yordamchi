@@ -1,8 +1,13 @@
-# Render deployment for Venox Yordamchi
-# Create a new Background Worker from this file, or import this blueprint.
+# Render blueprint for Venox Yordamchi
+# Dashboard: https://dashboard.render.com/blueprints
+# Create a new Blueprint and point it at this repository (render.yaml is auto-detected).
+
+databases: []
+
 services:
+  # 24/7 Telegram bot — long polling background worker.
   - type: worker
-    name: venox-yordamchi
+    name: venox-yordamchi-bot
     env: python
     region: oregon
     plan: free
@@ -12,17 +17,30 @@ services:
       - key: BOT_TOKEN
         sync: false
       - key: ADMIN_ID
-        sync: false
+        value: "8527026238"
+      - key: ADMIN_USERNAME
+        value: "THE_VENOX"
       - key: PAYMENT_CARD
+        value: "5614 6830 1549 1525"
+      # Public URL of the miniapp web service below (Render -> Web Service -> URL).
+      - key: MINI_APP_URL
         sync: false
-      - key: MESSAGE_LIMIT
-        value: "25"
       - key: DATABASE_PATH
-        value: "venox.db"
-      - key: TZ
-        value: "Asia/Tashkent"
+        value: "data/venox.db"
       - key: LOG_LEVEL
         value: "INFO"
-      # Optional: enable real AI replies instead of the built-in witty responder
-      - key: OPENAI_API_KEY
-        sync: false
+
+  # Web Mini App: template catalog + published bot pages.
+  - type: web
+    name: venox-yordamchi-miniapp
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python bot.py --webapp"
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_PATH
+        value: "data/venox.db"
+      - key: LOG_LEVEL
+        value: "INFO"

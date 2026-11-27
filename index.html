@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1120">
+<title>Venox Yordamchi — Bot Constructor</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root{
+    --bg:#0b1120; --bg2:#101a30; --card:#16223c; --card2:#1d2c4d;
+    --border:#2b3a5c; --text:#f1f5f9; --muted:#94a3b8;
+    --accent:#6d5efc; --accent2:#22d3ee; --accent-text:#ffffff;
+    --vip:#a855f7; --ok:#34d399; --warn:#fbbf24; --shadow:0 14px 34px rgba(0,0,0,.28);
+    --radius:18px;
+  }
+  html[data-theme="light"]{
+    --bg:#f4f6fb; --bg2:#ffffff; --card:#ffffff; --card2:#f1f5f9;
+    --border:#e2e8f0; --text:#0f172a; --muted:#64748b;
+    --accent:#5b4bdb; --accent2:#0891b2; --accent-text:#ffffff;
+    --vip:#9333ea; --ok:#059669; --warn:#d97706; --shadow:0 14px 30px rgba(15,23,42,.09);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent2)}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 16px 40px}
+
+  /* header */
+  header{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
+  .head-inner{max-width:1100px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:10px}
+  .logo{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:20px;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:var(--shadow)}
+  .brand strong{display:block;font-size:15px;letter-spacing:.2px}
+  .brand span{font-size:10px;color:var(--muted)}
+  .live{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);background:var(--card);border:1px solid var(--border);padding:6px 10px;border-radius:999px}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 22%,transparent)}
+
+  /* hero */
+  .hero{position:relative;overflow:hidden;margin:18px 0 8px;padding:26px 24px;border-radius:24px;background:linear-gradient(135deg,#5b4bdb 0%,#7c3aed 45%,#0891b2 100%);color:#fff;box-shadow:var(--shadow)}
+  .hero:before,.hero:after{content:"";position:absolute;border-radius:50%;background:rgba(255,255,255,.12);filter:blur(2px)}
+  .hero:before{width:200px;height:200px;right:-60px;top:-90px}
+  .hero:after{width:140px;height:140px;right:90px;bottom:-90px}
+  .hero h1{position:relative;margin:0;font-size:25px;line-height:1.2;letter-spacing:-.5px}
+  .hero p{position:relative;margin:8px 0 16px;font-size:13px;opacity:.9;max-width:560px}
+  .stats{position:relative;display:flex;flex-wrap:wrap;gap:8px}
+  .stat{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);border-radius:12px;padding:7px 11px;font-size:11px;backdrop-filter:blur(6px)}
+  .stat b{font-size:14px;margin-right:4px}
+
+  /* tabs */
+  nav{position:sticky;top:63px;z-index:15;display:flex;gap:8px;overflow-x:auto;padding:12px 0;scrollbar-width:none;background:linear-gradient(var(--bg) 70%,transparent)}
+  nav::-webkit-scrollbar{display:none}
+  .tab{white-space:nowrap;padding:9px 14px;border-radius:999px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:.18s}
+  .tab.on{background:linear-gradient(135deg,var(--accent),var(--vip));color:#fff;border-color:transparent;box-shadow:var(--shadow)}
+
+  section{display:none;animation:fade .25s ease}
+  section.on{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .sec-head{display:flex;align-items:baseline;gap:10px;margin:18px 0 10px;flex-wrap:wrap}
+  .sec-head h2{margin:0;font-size:18px}
+  .sec-head small{color:var(--muted);font-size:11px}
+
+  /* catalog */
+  .search{position:relative;margin-bottom:12px}
+  .search span{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:16px;opacity:.7}
+  .search input{width:100%;padding:12px 14px 12px 40px;border-radius:14px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:14px;outline:none;transition:.18s}
+  .search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+  .chips{display:flex;gap:8px;overflow-x:auto;padding:4px 0 12px;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{white-space:nowrap;padding:7px 12px;border-radius:999px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;transition:.18s}
+  .chip:hover{color:var(--text);border-color:var(--accent)}
+  .chip.on{background:var(--accent);color:var(--accent-text);border-color:transparent}
+  .count{font-size:11px;color:var(--muted);margin:2px 0 10px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:10px}
+  .tpl{position:relative;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;cursor:pointer;transition:.18s;overflow:hidden}
+  .tpl:hover{transform:translateY(-3px);border-color:var(--accent);box-shadow:var(--shadow)}
+  .tpl .ic{font-size:26px;line-height:1}
+  .tpl .nm{font-size:13px;font-weight:700;margin-top:9px;min-height:36px}
+  .tpl .ct{font-size:10px;color:var(--muted);margin-top:2px}
+  .tpl .badge{display:inline-block;margin-top:10px;font-size:9px;font-weight:700;padding:3px 8px;border-radius:7px;background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+  .tpl .badge.p{background:color-mix(in srgb,var(--vip) 20%,transparent);color:var(--vip)}
+  .tpl .go{position:absolute;right:12px;bottom:12px;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:#fff;font-size:12px;opacity:0;transition:.18s}
+  .tpl:hover .go{opacity:1}
+  .empty{color:var(--muted);font-size:13px;padding:26px;text-align:center;border:1px dashed var(--border);border-radius:var(--radius)}
+
+  /* pricing */
+  .plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+  .plan{position:relative;background:var(--card);border:1px solid var(--border);border-radius:22px;padding:20px;display:flex;flex-direction:column;transition:.18s}
+  .plan:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+  .plan.hot{border-color:var(--vip);box-shadow:0 0 0 1px color-mix(in srgb,var(--vip) 40%,transparent),var(--shadow)}
+  .ribbon{position:absolute;top:-11px;right:14px;background:linear-gradient(135deg,var(--vip),var(--accent));color:#fff;font-size:9px;font-weight:800;letter-spacing:.6px;padding:5px 10px;border-radius:999px}
+  .plan .pname{font-size:15px;font-weight:800}
+  .plan .pdesc{font-size:11px;color:var(--muted);margin-top:3px;min-height:30px}
+  .plan .price{font-size:27px;font-weight:900;margin-top:10px;letter-spacing:-.8px}
+  .plan .price small{font-size:12px;font-weight:600;color:var(--muted)}
+  .plan ul{list-style:none;padding:0;margin:14px 0 18px;flex:1}
+  .plan li{position:relative;padding-left:22px;font-size:11.5px;margin:8px 0;color:color-mix(in srgb,var(--text) 88%,var(--muted))}
+  .plan li:before{content:"✓";position:absolute;left:0;top:0;width:16px;height:16px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok);font-size:10px;font-weight:900}
+  .btn{width:100%;padding:12px;border:0;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--vip));color:#fff;font-size:13px;font-weight:700;cursor:pointer;transition:.18s}
+  .btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
+  .btn.alt{background:var(--card2);color:var(--text);border:1px solid var(--border)}
+
+  /* payment */
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:20px;box-shadow:var(--shadow)}
+  .cardbox{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 22%,var(--card)),var(--card2));border:1px solid var(--border);border-radius:16px;padding:16px;flex-wrap:wrap}
+  .cardbox .num{font-size:19px;font-weight:800;letter-spacing:1.5px;font-variant-numeric:tabular-nums;flex:1;min-width:200px}
+  .copy{padding:9px 13px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:11px;font-weight:700;cursor:pointer}
+  .steps{list-style:none;padding:0;margin:16px 0 0;counter-reset:s}
+  .steps li{position:relative;padding-left:38px;margin:14px 0;font-size:12.5px;counter-increment:s}
+  .steps li:before{content:counter(s);position:absolute;left:0;top:-2px;width:26px;height:26px;border-radius:9px;display:grid;place-items:center;background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent);font-weight:800;font-size:12px}
+  .steps b{display:block;font-size:13px}
+  .note{margin-top:14px;padding:11px 13px;border-radius:12px;background:color-mix(in srgb,var(--warn) 10%,transparent);border:1px solid color-mix(in srgb,var(--warn) 30%,transparent);font-size:11px;color:var(--warn)}
+  .row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+  .row .btn{width:auto;flex:1;min-width:160px}
+
+  /* form */
+  form{display:grid;gap:12px}
+  .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+  label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:5px}
+  input,textarea,select{width:100%;padding:11px 13px;border-radius:12px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:.18s}
+  input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 16%,transparent)}
+  textarea{min-height:100px;resize:vertical}
+  .ok-msg{display:none;padding:12px;border-radius:12px;background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok);font-size:12px;font-weight:600}
+  .ok-msg.on{display:block}
+  footer{text-align:center;color:var(--muted);font-size:10px;margin-top:28px;padding-top:16px;border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+<header>
+  <div class="head-inner">
+    <div class="logo">⚡</div>
+    <div class="brand"><strong>Venox Yordamchi</strong><span>Bot Constructor Mini App</span></div>
+    <div class="live"><i class="dot"></i><span id="liveText">Onlayn</span></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="hero">
+    <h1>Botingizni 1 daqiqada yarating 🚀</h1>
+    <p>Tayyor shablonni tanlang yoki o'zingizning botingizni buyurtma qiling. Barchasi bitta Mini App ichida.</p>
+    <div class="stats">
+      <div class="stat"><b id="statTpl">0</b> shablon</div>
+      <div class="stat"><b id="statCat">0</b> kategoriya</div>
+      <div class="stat"><b>3</b> tarif</div>
+      <div class="stat"><b>24/7</b> ishlaydi</div>
+    </div>
+  </div>
+
+  <nav>
+    <div class="tab on" data-tab="templates">🧩 Shablonlar</div>
+    <div class="tab" data-tab="pricing">💎 Tariflar</div>
+    <div class="tab" data-tab="payment">💳 To'lov</div>
+    <div class="tab" data-tab="custom">🛠 Buyurtma</div>
+  </nav>
+
+  <!-- CATALOG -->
+  <section id="templates" class="on">
+    <div class="sec-head"><h2>🏪 Botlar kutubxonasi</h2><small>shablonni tanlang — bot avtomatik yaratiladi</small></div>
+    <div class="search"><span>🔍</span><input id="q" placeholder="Nomi yoki tavsifi bo'yicha qidirish…" autocomplete="off"></div>
+    <div class="chips" id="chips"></div>
+    <div class="count" id="count"></div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <!-- PRICING -->
+  <section id="pricing">
+    <div class="sec-head"><h2>💎 Tarif rejalari</h2><small>Standart 60,000 UZS dan boshlanadi</small></div>
+    <div class="plans" id="plans"></div>
+  </section>
+
+  <!-- PAYMENT -->
+  <section id="payment">
+    <div class="sec-head"><h2>💳 To'lov va chek</h2><small>to'lov qiling, chekni yuboring, tarif avtomatik ochiladi</small></div>
+    <div class="panel">
+      <div class="cardbox">
+        <div class="num" id="cardNumber"></div>
+        <button class="copy" id="copyCard" type="button">📋 Nusxalash</button>
+      </div>
+      <ol class="steps">
+        <li><b>Kartaga to'lov qiling</b>Karta raqamini nusxalab, kerakli summani o'tkazing.</li>
+        <li><b>Tarifni tanlang</b>Pasdagi tugmalardan Standart yoki Ultra Pro ni tanlang.</li>
+        <li><b>Chek yuboring</b>Bot sizdan to'lov skrinshotini so'raydi — uni yuboring.</li>
+        <li><b>Tasdiqni kuting</b>Admin tekshiradi va tarifingiz avtomatik ochiladi.</li>
+      </ol>
+      <div class="note">⚠️ Faqat yuqoridagi karta raqamiga to'lov qiling. Savollar: @__ADMIN__</div>
+      <div class="row">
+        <button class="btn" data-plan="standart" type="button">✅ Standart — 60,000 UZS</button>
+        <button class="btn alt" data-plan="ultra" type="button">👑 Ultra Pro — 150,000 UZS</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- CUSTOM REQUEST -->
+  <section id="custom">
+    <div class="sec-head"><h2>🛠 Maxsus bot buyurtmasi</h2><small>o'z g'oyangizni yozing — biz amalga oshiramiz</small></div>
+    <div class="panel">
+      <form id="requestForm">
+        <div class="fields">
+          <div><label for="fName">Loyiha / bot nomi *</label><input id="fName" maxlength="60" placeholder="Masalan: Online do'kon boti" required></div>
+          <div><label for="fContact">Aloqa (username yoki telefon) *</label><input id="fContact" maxlength="80" placeholder="@username yoki +998…" required></div>
+          <div><label for="fType">Bot turi</label><select id="fType"><option>Shablon asosida</option><option>Custom (nol dan)</option><option>Web Mini App</option><option>AI integratsiyasi</option><option>Boshqa</option></select></div>
+          <div><label for="fDeadline">Muddat</label><select id="fDeadline"><option>Hafta ichida</option><option>2-3 kun</option><option>1 oy</option><option>Muhokama qilamiz</option></select></div>
+        </div>
+        <div><label for="fDesc">Bot nima qilishi kerak? *</label><textarea id="fDesc" maxlength="1200" placeholder="Funksiyalar, auditoriya, maqsad…" required></textarea></div>
+        <button class="btn" type="submit">📨 Buyurtmani yuborish</button>
+        <div class="ok-msg" id="okMsg">✅ Buyurtma yuborildi! Admin tez orada siz bilan bog'lanadi.</div>
+      </form>
+    </div>
+  </section>
+
+  <footer>Venox Yordamchi • 100+ bot shabloni • Custom bot quruvchi • @__ADMIN__</footer>
+</div>
+
+<script>
+  var DATA = __DATA__;
+  var PRICES = __PRICES__;
+  var tg = window.Telegram ? Telegram.WebApp : null;
+
+  /* ---- Telegram theme integration ---- */
+  function applyTheme() {
+    var root = document.documentElement;
+    var scheme = (tg && tg.colorScheme) ? tg.colorScheme : 'dark';
+    root.setAttribute('data-theme', scheme);
+    var p = (tg && tg.themeParams) || {};
+    var map = {
+      bg_color: '--bg', secondary_bg_color: '--card2', text_color: '--text',
+      hint_color: '--muted', link_color: '--accent2', button_color: '--accent',
+      button_text_color: '--accent-text', header_bg_color: '--bg2',
+      bottom_bar_bg_color: '--bg2'
+    };
+    Object.keys(map).forEach(function (key) {
+      if (p[key]) root.style.setProperty(map[key], p[key]);
+    });
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta && p.bg_color) meta.setAttribute('content', p.bg_color);
+    document.getElementById('liveText').textContent = scheme === 'light' ? 'Onlayn' : 'Onlayn';
+  }
+  if (tg) {
+    tg.expand();
+    applyTheme();
+    tg.onEvent('themeChanged', applyTheme);
+  } else {
+    applyTheme();
+  }
+
+  document.getElementById('cardNumber').textContent = '__CARD__';
+  document.getElementById('statTpl').textContent = DATA.length;
+  document.getElementById('statCat').textContent = categories().length;
+
+  function haptic() { if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light'); }
+  function send(payload) {
+    haptic();
+    var raw = JSON.stringify(payload);
+    if (tg) { tg.sendData(raw); tg.close(); }
+    else { console.log('WebApp payload:', raw); alert(raw); }
+  }
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];
+    });
+  }
+  function money(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+  function categories() {
+    var a = ['all'];
+    DATA.forEach(function (x) { if (a.indexOf(x.category_name) < 0) a.push(x.category_name); });
+    return a;
+  }
+
+  /* ---- tabs ---- */
+  document.querySelectorAll('.tab').forEach(function (tab) {
+    tab.onclick = function () {
+      document.querySelectorAll('.tab').forEach(function (t) { t.classList.remove('on'); });
+      document.querySelectorAll('section').forEach(function (s) { s.classList.remove('on'); });
+      tab.classList.add('on');
+      document.getElementById(tab.dataset.tab).classList.add('on');
+      haptic();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+  });
+
+  /* ---- catalog ---- */
+  var state = { cat: 'all', q: '' };
+  function renderChips() {
+    var all = categories();
+    var html = '';
+    all.forEach(function (c, i) {
+      var label = c === 'all' ? 'Hammasi' : c;
+      html += '<div class="chip' + (state.cat === c ? ' on' : '') + '" data-i="' + i + '">' + esc(label) + '</div>';
+    });
+    var root = document.getElementById('chips');
+    root.innerHTML = html;
+    var nodes = root.children;
+    for (var i = 0; i < nodes.length; i++) {
+      (function (node) {
+        node.onclick = function () {
+          state.cat = all[parseInt(node.getAttribute('data-i'), 10)];
+          haptic(); renderChips(); renderTemplates();
+        };
+      })(nodes[i]);
+    }
+  }
+  function renderTemplates() {
+    var q = state.q.toLowerCase();
+    var list = DATA.filter(function (x) {
+      return (state.cat === 'all' || x.category_name === state.cat) &&
+        (x.name.toLowerCase().indexOf(q) >= 0 || x.description.toLowerCase().indexOf(q) >= 0);
+    });
+    document.getElementById('count').textContent = list.length + ' ta shablon topildi';
+    var html = '';
+    list.forEach(function (x, i) {
+      html += '<div class="tpl" data-i="' + i + '">' +
+        '<div class="ic">' + x.icon + '</div>' +
+        '<div class="nm">' + esc(x.name) + '</div>' +
+        '<div class="ct">' + esc(x.category_name) + '</div>' +
+        '<span class="badge' + (x.premium ? ' p' : '') + '">' + (x.premium ? '👑 Premium' : '🆓 Bepul') + '</span>' +
+        '<div class="go">→</div></div>';
+    });
+    var root = document.getElementById('grid');
+    root.innerHTML = html || '<div class="empty">Hech narsa topilmadi. Boshqa so\'z bilan qidirib ko\'ring.</div>';
+    var cards = root.querySelectorAll('.tpl');
+    for (var i = 0; i < cards.length; i++) {
+      (function (card) {
+        card.onclick = function () {
+          send({ action: 'template', key: list[parseInt(card.getAttribute('data-i'), 10)].key });
+        };
+      })(cards[i]);
+    }
+  }
+  document.getElementById('q').addEventListener('input', function (e) {
+    state.q = e.target.value.trim(); renderTemplates();
+  });
+
+  /* ---- pricing ---- */
+  function renderPlans() {
+    var html = '';
+    PRICES.forEach(function (p) {
+      var price = p.price ? money(p.price) + ' UZS' : 'Bepul';
+      var perks = p.perks.map(function (v) { return '<li>' + esc(v) + '</li>'; }).join('');
+      var hot = p.key === 'standart';
+      html += '<div class="plan' + (hot ? ' hot' : '') + '">' +
+        (hot ? '<div class="ribbon">ENG MASHHUR</div>' : '') +
+        '<div class="pname">' + p.emoji + ' ' + esc(p.label) + '</div>' +
+        '<div class="pdesc">' + esc(p.description) + '</div>' +
+        '<div class="price">' + price + (p.days ? ' <small>/ ' + p.days + ' kun</small>' : '') + '</div>' +
+        '<ul>' + perks + '</ul>' +
+        '<button class="btn" data-tier="' + p.key + '" type="button">' +
+        (p.price ? 'Tarifni tanlash' : 'Bepul boshlash') + '</button></div>';
+    });
+    var root = document.getElementById('plans');
+    root.innerHTML = html;
+    root.querySelectorAll('button[data-tier]').forEach(function (button) {
+      button.onclick = function () { send({ action: 'plan', tier: button.dataset.tier }); };
+    });
+  }
+  document.querySelectorAll('button[data-plan]').forEach(function (button) {
+    button.onclick = function () { send({ action: 'plan', tier: button.dataset.plan }); };
+  });
+
+  /* ---- payment ---- */
+  document.getElementById('copyCard').onclick = function () {
+    var text = document.getElementById('cardNumber').textContent;
+    if (navigator.clipboard) navigator.clipboard.writeText(text);
+    haptic();
+    this.textContent = '✅ Nusxalandi';
+    var self = this;
+    setTimeout(function () { self.textContent = '📋 Nusxalash'; }, 1600);
+  };
+
+  /* ---- custom request ---- */
+  document.getElementById('requestForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var payload = {
+      action: 'custom_request',
+      name: document.getElementById('fName').value.trim(),
+      contact: document.getElementById('fContact').value.trim(),
+      type: document.getElementById('fType').value,
+      deadline: document.getElementById('fDeadline').value,
+      description: document.getElementById('fDesc').value.trim()
+    };
+    if (!payload.name || !payload.contact || !payload.description) return;
+    send(payload);
+    document.getElementById('okMsg').classList.add('on');
+    this.reset();
+  });
+
+  renderChips();
+  renderTemplates();
+  renderPlans();
+</script>
+</body>
+</html>

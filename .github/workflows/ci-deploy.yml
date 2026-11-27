@@ -1,0 +1,41 @@
+name: Verify and deploy
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Compile and smoke-test storage
+        run: |
+          python -m py_compile bot.py database.py
+          python -c "from database import Database, TEMPLATE_CATALOG, ADMIN_ID; d=Database('/tmp/venox-ci.db', seed=True); assert d.template_count() == len(TEMPLATE_CATALOG) >= 100; assert d.effective_tier(ADMIN_ID) == 'ultra'; print('OK', d.template_count(), 'templates')"
+
+  deploy:
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy hooks
+        env:
+          BOT_HOOK: ${{ secrets.RENDER_BOT_DEPLOY_HOOK }}
+          WEB_HOOK: ${{ secrets.RENDER_WEB_DEPLOY_HOOK }}
+        run: |
+          for hook in "$BOT_HOOK" "$WEB_HOOK"; do
+            if [ -n "$hook" ]; then
+              curl -fsS -X POST "$hook"
+              echo "deploy hook triggered"
+            fi
+          done
