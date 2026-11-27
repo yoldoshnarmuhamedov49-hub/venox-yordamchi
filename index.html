@@ -1,447 +1,392 @@
-<!doctype html>
-<html lang="uz">
+<!DOCTYPE html>
+<html lang="uz" data-theme="dark">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0b1120">
-<title>Venox Yordamchi — Bot Constructor</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<style>
-  :root{
-    --bg:#0b1120;--bg2:#101a30;--card:#16223c;--card2:#1d2c4d;--border:#2b3a5c;
-    --text:#f1f5f9;--muted:#94a3b8;--accent:#6d5efc;--accent2:#22d3ee;
-    --accent-text:#ffffff;--vip:#a855f7;--ok:#34d399;--warn:#fbbf24;
-    --shadow:0 14px 34px rgba(0,0,0,.28);--radius:18px;
-  }
-  html[data-theme="light"]{
-    --bg:#f4f6fb;--bg2:#ffffff;--card:#ffffff;--card2:#f1f5f9;--border:#e2e8f0;
-    --text:#0f172a;--muted:#64748b;--accent:#5b4bdb;--accent2:#0891b2;
-    --vip:#9333ea;--ok:#059669;--warn:#d97706;--shadow:0 14px 30px rgba(15,23,42,.09);
-  }
-  *{box-sizing:border-box}
-  html{scroll-behavior:smooth}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
-  .wrap{max-width:1100px;margin:0 auto;padding:0 16px 40px}
-  header{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
-  .head-inner{max-width:1100px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:10px}
-  .logo{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:20px;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:var(--shadow)}
-  .brand strong{display:block;font-size:15px}.brand span{font-size:10px;color:var(--muted)}
-  .live{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);background:var(--card);border:1px solid var(--border);padding:6px 10px;border-radius:999px}
-  .dot{width:7px;height:7px;border-radius:50%;background:var(--ok)}
-  .hero{position:relative;overflow:hidden;margin:18px 0 8px;padding:26px 24px;border-radius:24px;background:linear-gradient(135deg,#5b4bdb 0%,#7c3aed 45%,#0891b2 100%);color:#fff;box-shadow:var(--shadow)}
-  .hero:before,.hero:after{content:"";position:absolute;border-radius:50%;background:rgba(255,255,255,.12)}
-  .hero:before{width:200px;height:200px;right:-60px;top:-90px}.hero:after{width:140px;height:140px;right:90px;bottom:-90px}
-  .hero h1{position:relative;margin:0;font-size:25px;line-height:1.2;letter-spacing:-.5px}
-  .hero p{position:relative;margin:8px 0 16px;font-size:13px;opacity:.92;max-width:580px}
-  .stats{position:relative;display:flex;flex-wrap:wrap;gap:8px}
-  .stat{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22);border-radius:12px;padding:7px 11px;font-size:11px}
-  .stat b{font-size:14px;margin-right:4px}
-  nav{position:sticky;top:63px;z-index:15;display:flex;gap:8px;overflow-x:auto;padding:12px 0;scrollbar-width:none;background:linear-gradient(var(--bg) 70%,transparent)}
-  nav::-webkit-scrollbar{display:none}
-  .tab{white-space:nowrap;padding:9px 14px;border-radius:999px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:.18s}
-  .tab.on{background:linear-gradient(135deg,var(--accent),var(--vip));color:#fff;border-color:transparent;box-shadow:var(--shadow)}
-  section{display:none;animation:fade .25s ease}section.on{display:block}
-  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-  .sec-head{display:flex;align-items:baseline;gap:10px;margin:18px 0 10px;flex-wrap:wrap}
-  .sec-head h2{margin:0;font-size:18px}.sec-head small{color:var(--muted);font-size:11px}
-  .search{position:relative;margin-bottom:12px}
-  .search span{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:16px;opacity:.7}
-  .search input{width:100%;padding:12px 14px 12px 40px;border-radius:14px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:14px;outline:none}
-  .search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
-  .chips{display:flex;gap:8px;overflow-x:auto;padding:4px 0 12px;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}
-  .chip{white-space:nowrap;padding:7px 12px;border-radius:999px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer}
-  .chip.on{background:var(--accent);color:var(--accent-text);border-color:transparent}
-  .count{font-size:11px;color:var(--muted);margin:2px 0 10px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:10px}
-  .tpl{position:relative;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;cursor:pointer;transition:.18s}
-  .tpl:hover{transform:translateY(-3px);border-color:var(--accent);box-shadow:var(--shadow)}
-  .tpl .ic{font-size:26px;line-height:1}.tpl .nm{font-size:13px;font-weight:700;margin-top:9px;min-height:36px}
-  .tpl .ct{font-size:10px;color:var(--muted);margin-top:2px}
-  .badge{display:inline-block;margin-top:10px;font-size:9px;font-weight:700;padding:3px 8px;border-radius:7px;background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
-  .badge.p{background:color-mix(in srgb,var(--vip) 20%,transparent);color:var(--vip)}
-  .tpl .go{position:absolute;right:12px;bottom:12px;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:#fff;font-size:12px;opacity:0;transition:.18s}
-  .tpl:hover .go{opacity:1}
-  .empty{color:var(--muted);font-size:13px;padding:26px;text-align:center;border:1px dashed var(--border);border-radius:var(--radius)}
-  .plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
-  .plan{position:relative;background:var(--card);border:1px solid var(--border);border-radius:22px;padding:20px;display:flex;flex-direction:column;transition:.18s}
-  .plan:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
-  .plan.hot{border-color:var(--vip);box-shadow:0 0 0 1px color-mix(in srgb,var(--vip) 40%,transparent),var(--shadow)}
-  .ribbon{position:absolute;top:-11px;right:14px;background:linear-gradient(135deg,var(--vip),var(--accent));color:#fff;font-size:9px;font-weight:800;padding:5px 10px;border-radius:999px}
-  .plan .pname{font-size:15px;font-weight:800}.plan .pdesc{font-size:11px;color:var(--muted);margin-top:3px;min-height:30px}
-  .plan .price{font-size:27px;font-weight:900;margin-top:10px;letter-spacing:-.8px}.plan .price small{font-size:12px;font-weight:600;color:var(--muted)}
-  .plan ul{list-style:none;padding:0;margin:14px 0 18px;flex:1}
-  .plan li{position:relative;padding-left:22px;font-size:11.5px;margin:8px 0;color:var(--text)}
-  .plan li:before{content:"✓";position:absolute;left:0;width:16px;height:16px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok);font-size:10px;font-weight:900}
-  .btn{width:100%;padding:12px;border:0;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--vip));color:#fff;font-size:13px;font-weight:700;cursor:pointer;transition:.18s}
-  .btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
-  .btn.alt{background:var(--card2);color:var(--text);border:1px solid var(--border)}
-  .panel{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:20px;box-shadow:var(--shadow)}
-  .cardbox{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 22%,var(--card)),var(--card2));border:1px solid var(--border);border-radius:16px;padding:16px;flex-wrap:wrap}
-  .cardbox .num{font-size:19px;font-weight:800;letter-spacing:1.5px;flex:1;min-width:200px}
-  .copy{padding:9px 13px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:11px;font-weight:700;cursor:pointer}
-  .steps{list-style:none;padding:0;margin:16px 0 0;counter-reset:s}
-  .steps li{position:relative;padding-left:38px;margin:14px 0;font-size:12.5px;counter-increment:s}
-  .steps li:before{content:counter(s);position:absolute;left:0;top:-2px;width:26px;height:26px;border-radius:9px;display:grid;place-items:center;background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent);font-weight:800;font-size:12px}
-  .steps b{display:block;font-size:13px}
-  .note{margin-top:14px;padding:11px 13px;border-radius:12px;background:color-mix(in srgb,var(--warn) 10%,transparent);border:1px solid color-mix(in srgb,var(--warn) 30%,transparent);font-size:11px;color:var(--warn)}
-  .row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}.row .btn{width:auto;flex:1;min-width:160px}
-  form{display:grid;gap:12px}.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
-  label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:5px}
-  input,textarea,select{width:100%;padding:11px 13px;border-radius:12px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:13px;font-family:inherit;outline:none}
-  input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 16%,transparent)}
-  textarea{min-height:100px;resize:vertical}
-  .ok-msg{display:none;padding:12px;border-radius:12px;background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok);font-size:12px;font-weight:600}
-  .ok-msg.on{display:block}
-  footer{text-align:center;color:var(--muted);font-size:10px;margin-top:28px;padding-top:16px;border-top:1px solid var(--border)}
-  .build-result{display:none;margin-top:18px;border-top:1px dashed var(--border);padding-top:16px}
-  .build-result.on{display:block}
-  .build-result h3{margin:0 0 8px;font-size:17px}
-  .build-block{background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:12px;margin:10px 0}
-  .build-block b{display:block;font-size:12px;margin-bottom:6px;color:var(--accent2)}
-  .build-block code,.build-block div.step{display:block;font-size:11px;color:var(--text);background:var(--bg);border-radius:8px;padding:6px 9px;margin:5px 0;word-break:break-word;line-height:1.5}
-  .build-tip{font-size:11px;color:var(--muted);margin-top:10px}
-  .overlay{position:fixed;inset:0;z-index:50;background:rgba(2,6,23,.72);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:18px}
-  .overlay.on{display:flex}
-  .modal{width:100%;max-width:440px;max-height:86vh;overflow-y:auto;background:var(--card);border:1px solid var(--border);border-radius:22px;padding:20px;box-shadow:var(--shadow);animation:fade .2s ease}
-  .modal h3{margin:0 0 6px;font-size:18px}
-  .modal .meta{font-size:11px;color:var(--muted);margin-bottom:12px}
-  .modal .desc{font-size:13px;line-height:1.6;margin:10px 0 16px}
-  .modal .price-big{font-size:26px;font-weight:900;letter-spacing:-.6px;margin:4px 0}
-  .modal ul{list-style:none;padding:0;margin:12px 0}
-  .modal li{position:relative;padding-left:20px;font-size:12px;margin:7px 0}
-  .modal li:before{content:"✓";position:absolute;left:0;color:var(--ok);font-weight:900}
-  .modal-actions{display:grid;gap:8px;margin-top:14px}
-  .modal-close{float:right;border:0;background:var(--card2);color:var(--text);width:30px;height:30px;border-radius:9px;cursor:pointer;font-size:15px}
-  .copied{font-size:11px;color:var(--ok);min-height:16px;margin-top:8px}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Venox Yordamchi — Telegram bot konstruktori. 192+ tayyor shablon, AI bot yasash vositasi va 24/7 yordam bilan o'z botingizni daqiqalarda yarating.">
+  <meta name="theme-color" content="#080b1c">
+  <title>Venox Yordamchi — Telegram Bot Konstruktori</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<header><div class="head-inner">
-  <div class="logo">⚡</div>
-  <div class="brand"><strong>Venox Yordamchi</strong><span>Bot Constructor Mini App</span></div>
-  <div class="live"><i class="dot"></i><span id="liveText">Onlayn</span></div>
-</div></header>
+  <div class="aurora" aria-hidden="true">
+    <span class="aurora__blob aurora__blob--1"></span>
+    <span class="aurora__blob aurora__blob--2"></span>
+    <span class="aurora__blob aurora__blob--3"></span>
+  </div>
 
-<div class="wrap">
-  <div class="hero">
-    <h1>Botingizni 1 daqiqada yarating 🚀</h1>
-    <p>Tayyor shablonni tanlang yoki maxsus bot buyurtma qiling. Barchasi Telegram ichida, tezkor va kutishsiz.</p>
-    <div class="stats">
-      <div class="stat"><b id="statTpl">0</b> shablon</div>
-      <div class="stat"><b id="statCat">0</b> kategoriya</div>
-      <div class="stat"><b>3</b> tarif</div>
-      <div class="stat"><b>24/7</b> ishlaydi</div>
+  <!-- ============ HEADER ============ -->
+  <header class="header" id="top">
+    <div class="container header__inner">
+      <a class="brand" href="#top" aria-label="Venox Yordamchi — bosh sahifa">
+        <span class="brand__mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none"><path d="M7 6.5c0-1.2 1.4-1.9 2.3-1.1l16 11c.8.6.8 1.8 0 2.4l-16 11c-.9.7-2.3 0-2.3-1.1V6.5Z" fill="currentColor"/><path d="m7 16 18-6.5L16.5 21 12 17.5 10.5 23 7 16Z" fill="rgba(255,255,255,.55)"/></svg>
+        </span>
+        <span class="brand__text"><strong>Venox</strong><span>Yordamchi</span></span>
+      </a>
+
+      <nav class="nav" id="nav" aria-label="Asosiy menyu">
+        <a href="#xususiyatlar" class="nav__link">Imkoniyatlar</a>
+        <a href="#shablonlar" class="nav__link">Shablonlar</a>
+        <a href="#quruvchi" class="nav__link">AI quruvchi</a>
+        <a href="#narxlar" class="nav__link">Narxlar</a>
+        <a href="#tolov" class="nav__link">To'lov</a>
+        <a href="https://t.me/CodeMinnt_bot/venox" target="_blank" rel="noopener" class="btn btn--small nav__cta">Bot yaratish <span aria-hidden="true">→</span></a>
+      </nav>
+
+      <div class="header__actions">
+        <button class="icon-btn theme-toggle" id="themeToggle" type="button" aria-label="Tema ni o'zgartirish" title="Tema ni o'zgartirish">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M20.5 14.3A8.5 8.5 0 0 1 9.7 3.5 8.5 8.5 0 1 0 20.5 14.3Z"/></svg>
+        </button>
+        <button class="icon-btn menu-toggle" id="menuToggle" type="button" aria-label="Menyuni ochish" aria-expanded="false" aria-controls="nav">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- ============ HERO ============ -->
+    <section class="hero">
+      <div class="container hero__inner">
+        <div class="hero__copy">
+          <a href="https://t.me/CodeMinnt_bot/venox" target="_blank" rel="noopener" class="badge reveal">
+            <span class="badge__pulse"></span> Telegram bot konstruktori · Ochiq beta
+          </a>
+          <h1 class="reveal">Botingizni <span class="gradient-text">daqiqalarda</span> yarating, kod yozmasdan.</h1>
+          <p class="hero__lead reveal">Venox Yordamchi — 192+ tayyor shablon, sun'iy intellekt yordamchisi va oddiy vizual quruvchi. Fikringizni yozing, tayyor botni oling.</p>
+          <div class="hero__buttons reveal">
+            <a href="https://t.me/CodeMinnt_bot/venox" target="_blank" rel="noopener" class="btn btn--primary btn--lg">Bot yaratish <span aria-hidden="true">→</span></a>
+            <a href="https://t.me/CodeMinnt_bot" target="_blank" rel="noopener" class="btn btn--ghost btn--lg">Bot bilan gaplashish</a>
+          </div>
+          <div class="hero__stats reveal">
+            <div class="stat"><strong data-count="192">0</strong><span>+ shablon</span></div>
+            <div class="stat"><strong>24/7</strong><span>ishlaydi</span></div>
+            <div class="stat"><strong data-count="16">0</strong><span>toifa</span></div>
+            <div class="stat"><strong>0</strong><span>kod kerak</span></div>
+          </div>
+          <div class="hero__proof reveal">
+            <div class="avatars" aria-hidden="true"><span>A</span><span>M</span><span>D</span><span>S</span></div>
+            <span><strong>1 200+</strong> bot yaratilgan · <span class="stars">★★★★★</span> 4.9/5</span>
+          </div>
+        </div>
+
+        <div class="hero__visual reveal" aria-hidden="true">
+          <div class="phone">
+            <div class="phone__notch"></div>
+            <div class="phone__head">
+              <span class="phone__avatar">🤖</span>
+              <span><strong>Venox Yordamchi</strong><small>online</small></span>
+              <span class="phone__more">⋮</span>
+            </div>
+            <div class="phone__chat">
+              <div class="bubble bubble--bot">Assalomu alaykum! Qanday bot yaratmoqchisiz? 😊</div>
+              <div class="bubble bubble--user">Online do'kon uchun bot kerak</div>
+              <div class="bubble bubble--bot">
+                Tayyor! <strong>Do'kon Bot Pro</strong> tanlandi.<br>
+                <span class="bubble__chip">🛍 Mahsulotlar</span>
+                <span class="bubble__chip">🛒 Savat</span>
+                <span class="bubble__chip">💳 To'lov</span>
+                <span class="bubble__chip">📦 Buyurtma</span>
+              </div>
+              <div class="typing"><i></i><i></i><i></i></div>
+            </div>
+            <div class="phone__input">Xabar yozing... <span>➤</span></div>
+          </div>
+          <div class="float-card float-card--top">
+            <span class="float-card__icon">✨</span>
+            <div><strong>AI yordamchi</strong><small>Fikringizni tushunadi</small></div>
+          </div>
+          <div class="float-card float-card--bottom">
+            <span class="float-card__icon float-card__icon--green">⚡</span>
+            <div><strong>3 daqiqa</strong><small>o'rtacha vaqt</small></div>
+          </div>
+        </div>
+      </div>
+      <div class="container">
+        <div class="marquee" aria-label="Bot turlari">
+          <div class="marquee__track">
+            <span>E-Commerce</span><i>✦</i><span>Sun'iy intellekt</span><i>✦</i><span>SMM</span><i>✦</i><span>Kripto</span><i>✦</i><span>Ta'lim</span><i>✦</i><span>Biznes</span><i>✦</i><span>Turizm</span><i>✦</i><span>Sog'liq</span><i>✦</i>
+            <span>E-Commerce</span><i>✦</i><span>Sun'iy intellekt</span><i>✦</i><span>SMM</span><i>✦</i><span>Kripto</span><i>✦</i><span>Ta'lim</span><i>✦</i><span>Biznes</span><i>✦</i><span>Turizm</span><i>✦</i><span>Sog'liq</span><i>✦</i>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ FEATURES ============ -->
+    <section class="section" id="xususiyatlar">
+      <div class="container">
+        <div class="section__head reveal">
+          <span class="eyebrow">Nima uchun Venox?</span>
+          <h2>Hamma narsa <span class="gradient-text">bitta joyda</span></h2>
+          <p>Fikrdan tortib to ishga tushirishgacha — texnik bilim talab qilmaydi.</p>
+        </div>
+        <div class="features-grid">
+          <article class="feature-card reveal"><span class="feature-card__icon">🧩</span><h3>192+ shablon</h3><p>16 ta sohada tayyor botlar. Tanlang, sozlang va darhol ishga tushiring.</p></article>
+          <article class="feature-card reveal"><span class="feature-card__icon">🧠</span><h3>AI konstruktor</h3><p>Bot haqida oddiy tillik yozing — AI tuzilma va buyruqlarni yaratadi.</p></article>
+          <article class="feature-card reveal"><span class="feature-card__icon">⚡</span><h3>Tezkor ishga tushirish</h3><p>O'rtacha 3 daqiqada tayyor bot. Server, domen va kod bilan shug'ullanmang.</p></article>
+          <article class="feature-card reveal"><span class="feature-card__icon">🔒</span><h3>24/7 ishlash</h3><p>Botingiz kecha-kunduz javob beradi. Uzluksiz va barqaror ish.</p></article>
+          <article class="feature-card reveal"><span class="feature-card__icon">💬</span><h3>Jonli maslahatchi</h3><p>Savol yuboring, mutaxassisdarajadagi javob oling — to'g'ridan-to'g'ri Telegramda.</p></article>
+          <article class="feature-card reveal"><span class="feature-card__icon">💰</span><h3>Pul ishlash imkoni</h3><p>Obuna, to'lov va buyurtma oqimlari bilan botingiz daromad keltirsin.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ TEMPLATES ============ -->
+    <section class="section section--alt" id="shablonlar">
+      <div class="container">
+        <div class="section__head reveal">
+          <span class="eyebrow">Shablonlar kutubxonasi</span>
+          <h2>O'zingizga <span class="gradient-text">mos botni toping</span></h2>
+          <p>192 ta tayyor yechim ichidan qidirib, ko'rib va tanlab oling.</p>
+        </div>
+
+        <div class="catalog reveal">
+          <div class="catalog__toolbar">
+            <label class="search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <input id="searchInput" type="search" placeholder="Shablon yoki toifa bo'yicha qidirish..." autocomplete="off" aria-label="Shablon qidirish">
+              <button id="clearSearch" class="search__clear" type="button" aria-label="Qidiruvni tozalash" hidden>×</button>
+            </label>
+            <span class="catalog__count" id="resultCount">192 ta shablon</span>
+          </div>
+          <div class="chips" id="categoryChips" role="group" aria-label="Toifalar"></div>
+          <div class="template-grid" id="templateGrid"></div>
+          <div class="catalog__more" id="moreWrap" hidden>
+            <button class="btn btn--ghost" id="loadMore" type="button">Yana ko'rsatish ↓</button>
+          </div>
+          <div class="empty-state" id="emptyState" hidden>
+            <span>🔍</span><h3>Hech narsa topilmadi</h3><p>Boshqa so'z yoki toifa bilan qidirib ko'ring.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ AI BUILDER ============ -->
+    <section class="section" id="quruvchi">
+      <div class="container">
+        <div class="section__head reveal">
+          <span class="eyebrow">AI bot quruvchi · Demo</span>
+          <h2>Fikringizni yozing, <span class="gradient-text">bot paydo bo'lsin</span></h2>
+          <p>Bu interaktiv demo — hech qanday ro'yxatdan o'tishsiz sinab ko'ring.</p>
+        </div>
+
+        <div class="builder reveal">
+          <div class="builder__panel">
+            <div class="builder__panel-head"><span class="builder__step">1</span><h3>Bot haqida yozing</h3></div>
+            <textarea id="ideaInput" rows="5" placeholder="Masalan: Kripto narxlarini kuzatib, kunlik xabar yuboradigan bot yaratmoqchiman..."></textarea>
+            <div class="builder__examples">
+              <span>Misol:</span>
+              <button type="button" class="example-chip">Online do'kon boti</button>
+              <button type="button" class="example-chip">AI yordamchi</button>
+              <button type="button" class="example-chip">Kripto kuzatuvchi</button>
+              <button type="button" class="example-chip">Ta'lim boti</button>
+            </div>
+            <button class="btn btn--primary btn--full" id="generateBtn" type="button">
+              <span class="btn__spark">✨</span> Bot tuzilmasini yaratish
+            </button>
+            <p class="builder__hint">Millisekundlar ichida tuzilma, buyruqlar va pul ishlash rejasi chiqadi.</p>
+          </div>
+
+          <div class="builder__panel builder__panel--result">
+            <div class="builder__panel-head"><span class="builder__step builder__step--alt">2</span><h3>Tayyor tuzilma</h3><span class="builder__live"><i></i> LIVE</span></div>
+            <div class="builder__result" id="builderResult">
+              <div class="builder__placeholder" id="builderPlaceholder">
+                <span>🤖</span>
+                <p>Bot tuzilmasi bu yerde paydo bo'ladi.</p>
+                <small>Chap tomonga g'oyangizni yozib, "Yaratish" tugmasini bosing.</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ HOW IT WORKS ============ -->
+    <section class="section section--alt">
+      <div class="container">
+        <div class="section__head reveal">
+          <span class="eyebrow">Qanday ishlaydi</span>
+          <h2>4 qadamda <span class="gradient-text">tayyor bot</span></h2>
+        </div>
+        <div class="steps">
+          <div class="step reveal"><span class="step__num">01</span><h3>G'oyani yozing</h3><p>Bot nima qilishi kerakligini oddiy tillik tushuntiring.</p></div>
+          <div class="step reveal"><span class="step__num">02</span><h3>Shablonni tanlang</h3><p>AI mos shablon va buyruqlar ro'yxatini taklif qiladi.</p></div>
+          <div class="step reveal"><span class="step__num">03</span><h3>Sozlang</h3><p>Matn, tugmalar va dizaynni o'zingizga moslashtiring.</p></div>
+          <div class="step reveal"><span class="step__num">04</span><h3>Ishga tushiring</h3><p>Botni Telegramga ulang va foydalanuvchilarni jalb qiling.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ PRICING ============ -->
+    <section class="section" id="narxlar">
+      <div class="container">
+        <div class="section__head reveal">
+          <span class="eyebrow">Tariflar</span>
+          <h2>Sizga <span class="gradient-text">mos reja</span> tanlang</h2>
+          <p>Boshlangich bepul, keyin esa ehtiyojingizga qarab kengaytiring.</p>
+        </div>
+
+        <div class="pricing">
+          <article class="price-card reveal">
+            <div class="price-card__top">
+              <span class="price-card__name">Standart</span>
+              <span class="price-card__tag">Boshlash uchun</span>
+            </div>
+            <div class="price-card__price"><strong>60,000</strong><span>UZS / 30 kun</span></div>
+            <p class="price-card__desc">Kichik biznes va shaxsiy botlar uchun ideal.</p>
+            <a href="https://t.me/CodeMinnt_bot/venox" target="_blank" rel="noopener" class="btn btn--ghost btn--full">Standartni tanlash</a>
+            <ul class="price-list">
+              <li>10 tagacha faol bot</li>
+              <li>192+ shablonning barchasi</li>
+              <li>AI bot quruvchi</li>
+              <li>AI maslahatchi yordam</li>
+              <li>Asosiy buyruqlar va menyular</li>
+              <li>Email / Telegram yordam</li>
+            </ul>
+          </article>
+
+          <article class="price-card price-card--pro reveal" data-popular="Eng mashhur">
+            <div class="price-card__top">
+              <span class="price-card__name">Ultra Pro</span>
+              <span class="price-card__tag price-card__tag--vip">VIP</span>
+            </div>
+            <div class="price-card__price"><strong>150,000</strong><span>UZS / 90 kun</span></div>
+            <p class="price-card__desc">Professional foydalanuvchilar va jamoalar uchun.</p>
+            <a href="https://t.me/CodeMinnt_bot/venox" target="_blank" rel="noopener" class="btn btn--primary btn--full">Ultra Pro ni tanlash <span aria-hidden="true">→</span></a>
+            <ul class="price-list">
+              <li><strong>Cheksiz</strong> faol bot</li>
+              <li><strong>Barcha</strong> shablon + yangilari birinchi bo'lib</li>
+              <li><strong>Kengaytirilgan</strong> AI quruvchi</li>
+              <li>Shaxsiy maslahat — @THE_VENOX</li>
+              <li>Maxsus buyruqlar va integratsiyalar</li>
+              <li>Reklamasiz, o'z brendingiz bilan</li>
+              <li>24/7 ustuvor yordam</li>
+              <li>Daromad / monetizatsiya strategiyasi</li>
+            </ul>
+          </article>
+        </div>
+
+        <div class="comparison reveal">
+          <h3>Tariflarni taqqoslash</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Imkoniyat</th><th>Standart</th><th>Ultra Pro</th></tr></thead>
+              <tbody>
+                <tr><td>Faol botlar</td><td>10 ta</td><td><strong>Cheksiz</strong></td></tr>
+                <tr><td>Shablonlar</td><td>192+</td><td><strong>192+ & yangilari</strong></td></tr>
+                <tr><td>AI quruvchi</td><td>✓</td><td><strong>✓ Kengaytirilgan</strong></td></tr>
+                <tr><td>AI maslahatchi</td><td>✓</td><td>✓</td></tr>
+                <tr><td>Maxsus integratsiyalar</td><td>—</td><td>✓</td></tr>
+                <tr><td>Shaxsiy yordam</td><td>—</td><td>✓ @THE_VENOX</td></tr>
+                <tr><td>Brending / reklamasiz</td><td>—</td><td>✓</td></tr>
+                <tr><td>Muddat</td><td>30 kun</td><td><strong>90 kun</strong></td></tr>
+                <tr><td>Narx</td><td>60,000 UZS</td><td><strong>150,000 UZS</strong></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ PAYMENT ============ -->
+    <section class="section section--alt" id="tolov">
+      <div class="container">
+        <div class="section__head reveal">
+          <span class="eyebrow">To'lov va buyurtma</span>
+          <h2>To'lang, <span class="gradient-text">faollashtiramiz</span></h2>
+          <p>Oddiy 4 qadam — tasdiqlangach tarifingiz avtomatik faollashadi.</p>
+        </div>
+
+        <div class="payment">
+          <div class="payment__card reveal">
+            <div class="payment__label">To'lov uchun karta</div>
+            <div class="card-number" id="cardNumber">5614 6830 1549 1525</div>
+            <button class="copy-btn" id="copyCard" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>
+              <span id="copyLabel">Karta raqamini nusxalash</span>
+            </button>
+            <div class="card-meta"><span>UZCARD · O'zbekiston</span><span>•••• 1525</span></div>
+            <div class="payment__secure">🔒 Ma'lumotlaringiz xavfsiz. Faqat o'tkazma uchun foydalaning.</div>
+          </div>
+
+          <div class="payment__steps reveal">
+            <div class="pay-step"><span>1</span><div><strong>Tarifni tanlang</strong><p>Standart yoki Ultra Pro ni tanlab, bot orqali buyurtma bering.</p></div></div>
+            <div class="pay-step"><span>2</span><div><strong>Kartaga o'tkazma qiling</strong><p>Ko'rsatilgan karta raqamiga kerakli miqdorni yuboring.</p></div></div>
+            <div class="pay-step"><span>3</span><div><strong>Chek yuboring</strong><p>To'lov skrinshotini <a href="https://t.me/CodeMinnt_bot" target="_blank" rel="noopener">@CodeMinnt_bot</a> ga yuboring.</p></div></div>
+            <div class="pay-step"><span>4</span><div><strong>Tarif faollashadi</strong><p>Admin tasdiqlagach, imkoniyatlar darhol ochiladi.</p></div></div>
+            <div class="payment__contacts">
+              <a href="https://t.me/CodeMinnt_bot" target="_blank" rel="noopener" class="btn btn--primary">Chek yuborish <span aria-hidden="true">→</span></a>
+              <a href="https://t.me/THE_VENOX" target="_blank" rel="noopener" class="btn btn--outline">Admin: @THE_VENOX</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ FAQ ============ -->
+    <section class="section">
+      <div class="container container--narrow">
+        <div class="section__head reveal">
+          <span class="eyebrow">Ko'p so'raladigan savollar</span>
+          <h2>Javoblarni <span class="gradient-text">toping</span></h2>
+        </div>
+        <div class="faq" id="faq">
+          <details class="faq__item reveal"><summary>Bot yaratish uchun kod bilish kerakmi?<span></span></summary><p>Yo'q. Venox Yordamchi vizual konstruktor va AI yordamchisi bilan ishlaydi — faqat g'oyangizni yozing, qolganini qilamiz.</p></details>
+          <details class="faq__item reveal"><summary>Necha bot yaratish mumkin?<span></span></summary><p>Standart tarifda 10 tagacha, Ultra Pro da cheksiz sonli bot yaratishingiz mumkin.</p></details>
+          <details class="faq__item reveal"><summary>To'lov qancha vaqt ichida tasdiqlanadi?<span></span></summary><p>Odatda chek yuborganingizdan keyin bir necha daqiqa ichida. Admin band bo'lsa, biroz kutish talab qilinishi mumkin.</p></details>
+          <details class="faq__item reveal"><summary>Shablonlarni o'zgartirsa bo'ladimi?<span></span></summary><p>Ha. Har bir shablonning matnlari, tugmalari va buyruqlari to'liq sozlanadi.</p></details>
+          <details class="faq__item reveal"><summary>Yordam kerak bo'lsa, kimga murojaat qilaman?<span></span></summary><p><a href="https://t.me/CodeMinnt_bot" target="_blank" rel="noopener">@CodeMinnt_bot</a> yoki to'g'ridan-to'g'ri admin <a href="https://t.me/THE_VENOX" target="_blank" rel="noopener">@THE_VENOX</a> ga yozing.</p></details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CTA ============ -->
+    <section class="cta">
+      <div class="container">
+        <div class="cta__box reveal">
+          <span class="cta__glow" aria-hidden="true"></span>
+          <h2>Bot yaratishni <span>boshlaymizmi?</span></h2>
+          <p>G'oyangiz bor — bizda uni amalga oshirish vositasi bor. Hoziroq sinab ko'ring.</p>
+          <div class="cta__buttons">
+            <a href="https://t.me/CodeMinnt_bot/venox" target="_blank" rel="noopener" class="btn btn--light btn--lg">Bot yaratish <span aria-hidden="true">→</span></a>
+            <a href="https://t.me/CodeMinnt_bot" target="_blank" rel="noopener" class="btn btn--outline-light btn--lg">Savol so'rash</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="footer">
+    <div class="container footer__inner">
+      <div class="footer__brand">
+        <a class="brand" href="#top">
+          <span class="brand__mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none"><path d="M7 6.5c0-1.2 1.4-1.9 2.3-1.1l16 11c.8.6.8 1.8 0 2.4l-16 11c-.9.7-2.3 0-2.3-1.1V6.5Z" fill="currentColor"/><path d="m7 16 18-6.5L16.5 21 12 17.5 10.5 23 7 16Z" fill="rgba(255,255,255,.55)"/></svg></span>
+          <span class="brand__text"><strong>Venox</strong><span>Yordamchi</span></span>
+        </a>
+        <p>Telegram botlarini kod yozmasdan yaratish platformasi.</p>
+      </div>
+      <div class="footer__col"><h4>Sahifa</h4><a href="#xususiyatlar">Imkoniyatlar</a><a href="#shablonlar">Shablonlar</a><a href="#quruvchi">AI quruvchi</a><a href="#narxlar">Narxlar</a></div>
+      <div class="footer__col"><h4>Bog'lanish</h4><a href="https://t.me/CodeMinnt_bot" target="_blank" rel="noopener">@CodeMinnt_bot</a><a href="https://t.me/CodeMinnt_bot/venox" target="_blank" rel="noopener">Mini App</a><a href="https://t.me/THE_VENOX" target="_blank" rel="noopener">@THE_VENOX</a></div>
+      <div class="footer__col"><h4>Holat</h4><span class="footer__status"><i></i> Barcha tizimlar ishlayapti</span><span>192+ shablon · 24/7</span></div>
+    </div>
+    <div class="container footer__bottom"><span>© 2026 Venox Yordamchi. Barcha huquqlar himoyalangan.</span><span>Made with ❤️ for Telegram</span></div>
+  </footer>
+
+  <!-- ============ MODAL ============ -->
+  <div class="modal" id="modal" hidden>
+    <div class="modal__backdrop" data-close></div>
+    <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button class="modal__close" type="button" data-close aria-label="Yopish">×</button>
+      <div id="modalBody"></div>
     </div>
   </div>
 
-  <nav>
-    <div class="tab on" data-tab="templates">🧩 Shablonlar</div>
-    <div class="tab" data-tab="aibuilder">🤖 AI Bot Yasash</div>
-    <div class="tab" data-tab="pricing">💎 Tariflar</div>
-    <div class="tab" data-tab="payment">💳 To'lov</div>
-    <div class="tab" data-tab="custom">🛠 Buyurtma</div>
-  </nav>
-
-  <section id="aibuilder">
-    <div class="sec-head"><h2>🤖 AI Bot Yasash</h2><small>g'oyangizni yozing yoki shablon tanlang — tuzilma shu yerda tayyor bo'ladi</small></div>
-    <div class="panel">
-      <form id="builderForm">
-        <div class="fields">
-          <div>
-            <label for="bTemplate">Shablon (ixtiyoriy)</label>
-            <select id="bTemplate"><option value="">— Shablonsiz, o'z g'oyam —</option></select>
-          </div>
-          <div>
-            <label for="bName">Bot nomi</label>
-            <input id="bName" maxlength="60" placeholder="Masalan: Do'kon yordamchisi">
-          </div>
-        </div>
-        <div>
-          <label for="bIdea">Bot nima qilishi kerak? *</label>
-          <textarea id="bIdea" maxlength="1500" placeholder="Kimga xizmat qiladi, qanday vazifa bajaradi, qayerda ishlatiladi…" required></textarea>
-        </div>
-        <div class="row">
-          <button class="btn" type="submit">✨ Bot tuzilmasini yaratish</button>
-          <button class="btn alt" id="bClear" type="button">🧹 Tozalash</button>
-        </div>
-      </form>
-      <div id="builderResult"></div>
-    </div>
-  </section>
-
-  <section id="templates" class="on">
-    <div class="sec-head"><h2>🏪 Botlar kutubxonasi</h2><small>shablonni tanlang — bot avtomatik yaratiladi</small></div>
-    <div class="search"><span>🔍</span><input id="q" placeholder="Nomi yoki tavsifi bo'yicha qidirish…" autocomplete="off"></div>
-    <div class="chips" id="chips"></div>
-    <div class="count" id="count"></div>
-    <div class="grid" id="grid"></div>
-  </section>
-
-  <section id="pricing">
-    <div class="sec-head"><h2>💎 Tarif rejalari</h2><small>Standart 60,000 UZS dan boshlanadi</small></div>
-    <div class="plans" id="plans"></div>
-  </section>
-
-  <section id="payment">
-    <div class="sec-head"><h2>💳 To'lov va chek</h2><small>to'lov qiling, chekni yuboring — tarif avtomatik ochiladi</small></div>
-    <div class="panel">
-      <div class="cardbox"><div class="num" id="cardNumber">5614 6830 1549 1525</div><button class="copy" id="copyCard" type="button">📋 Nusxalash</button></div>
-      <ol class="steps">
-        <li><b>Kartaga to'lov qiling</b>Karta raqamini nusxalab, kerakli summani o'tkazing.</li>
-        <li><b>Tarifni tanlang</b>Pasdagi tugmalardan Standart yoki Ultra Pro ni tanlang.</li>
-        <li><b>Chek yuboring</b>Bot sizdan to'lov skrinshotini so'raydi — uni yuboring.</li>
-        <li><b>Tasdiqni kuting</b>Admin @THE_VENOX tekshiradi va tarif avtomatik ochiladi.</li>
-      </ol>
-      <div class="note">⚠️ Faqat yuqoridagi karta raqamiga to'lov qiling. Savollar: @THE_VENOX</div>
-      <div class="row">
-        <button class="btn" data-plan="standart" type="button">✅ Standart — 60,000 UZS</button>
-        <button class="btn alt" data-plan="ultra" type="button">👑 Ultra Pro — 150,000 UZS</button>
-      </div>
-    </div>
-  </section>
-
-  <section id="custom">
-    <div class="sec-head"><h2>🛠 Maxsus bot buyurtmasi</h2><small>buyurtma to'g'ridan-to'g'ri adminga yuboriladi</small></div>
-    <div class="panel"><form id="requestForm">
-      <div class="fields">
-        <div><label for="fName">Loyiha / bot nomi *</label><input id="fName" maxlength="60" placeholder="Masalan: Online do'kon boti" required></div>
-        <div><label for="fContact">Aloqa (username yoki telefon) *</label><input id="fContact" maxlength="80" placeholder="@username yoki +998…" required></div>
-        <div><label for="fType">Bot turi</label><select id="fType"><option>Custom (nol dan)</option><option>Shablon asosida</option><option>AI integratsiyasi</option><option>Boshqa</option></select></div>
-        <div><label for="fDeadline">Muddat</label><select id="fDeadline"><option>Hafta ichida</option><option>2-3 kun</option><option>1 oy</option><option>Muhokama qilamiz</option></select></div>
-      </div>
-      <div><label for="fDesc">Bot nima qilishi kerak? *</label><textarea id="fDesc" maxlength="1200" placeholder="Funksiyalar, auditoriya, maqsad…" required></textarea></div>
-      <button class="btn" type="submit">📨 Buyurtmani yuborish</button>
-      <div class="ok-msg" id="okMsg">✅ Buyurtma yuborildi! Admin tez orada bog'lanadi.</div>
-    </form></div>
-  </section>
-
-  <footer>Venox Yordamchi • 192 bot shabloni • Mini App ichida ishlaydi • @THE_VENOX</footer>
-</div>
-
-<div class="overlay" id="overlay">
-  <div class="modal" id="modal">
-    <button class="modal-close" id="modalClose" type="button">✕</button>
-    <div id="modalBody"></div>
-  </div>
-</div>
-
-<script>
-  var DATA = [{"key":"tpl_001","name":"Onlayn do'kon","icon":"🛒","category_name":"E-commerce","description":"Onlayn do'kon — E-commerce sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_002","name":"Savatcha bot","icon":"🛒","category_name":"E-commerce","description":"Savatcha bot — E-commerce sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_003","name":"Mahsulot katalogi","icon":"🛒","category_name":"E-commerce","description":"Mahsulot katalogi — E-commerce sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_004","name":"Buyurtma kuzatuv","icon":"🛒","category_name":"E-commerce","description":"Buyurtma kuzatuv — E-commerce sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_005","name":"Chegirma va promokod","icon":"🛒","category_name":"E-commerce","description":"Chegirma va promokod — E-commerce sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_006","name":"Mahsulot qidiruv","icon":"🛒","category_name":"E-commerce","description":"Mahsulot qidiruv — E-commerce sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_007","name":"Wishlist bot","icon":"🛒","category_name":"E-commerce","description":"Wishlist bot — E-commerce sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_008","name":"To'lov hisobi","icon":"🛒","category_name":"E-commerce","description":"To'lov hisobi — E-commerce sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_009","name":"Yetkazib berish","icon":"🛒","category_name":"E-commerce","description":"Yetkazib berish — E-commerce sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_010","name":"Sharhlar boti","icon":"🛒","category_name":"E-commerce","description":"Sharhlar boti — E-commerce sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_011","name":"Hisob-faktura","icon":"🛒","category_name":"E-commerce","description":"Hisob-faktura — E-commerce sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_012","name":"Ombor hisobi","icon":"🛒","category_name":"E-commerce","description":"Ombor hisobi — E-commerce sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_013","name":"Quiz bot","icon":"🎓","category_name":"Ta'lim","description":"Quiz bot — Ta'lim sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_014","name":"Kurs boti","icon":"🎓","category_name":"Ta'lim","description":"Kurs boti — Ta'lim sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_015","name":"Dars jadvali","icon":"🎓","category_name":"Ta'lim","description":"Dars jadvali — Ta'lim sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_016","name":"Lug'at bot","icon":"🎓","category_name":"Ta'lim","description":"Lug'at bot — Ta'lim sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_017","name":"Flashcard bot","icon":"🎓","category_name":"Ta'lim","description":"Flashcard bot — Ta'lim sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_018","name":"Vazifa boti","icon":"🎓","category_name":"Ta'lim","description":"Vazifa boti — Ta'lim sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_019","name":"Imtihon tayyorgarlik","icon":"🎓","category_name":"Ta'lim","description":"Imtihon tayyorgarlik — Ta'lim sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_020","name":"Til o'rganish","icon":"🎓","category_name":"Ta'lim","description":"Til o'rganish — Ta'lim sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_021","name":"Davomat boti","icon":"🎓","category_name":"Ta'lim","description":"Davomat boti — Ta'lim sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_022","name":"Sertifikat boti","icon":"🎓","category_name":"Ta'lim","description":"Sertifikat boti — Ta'lim sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_023","name":"Kutubxona boti","icon":"🎓","category_name":"Ta'lim","description":"Kutubxona boti — Ta'lim sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_024","name":"Repetitor boti","icon":"🎓","category_name":"Ta'lim","description":"Repetitor boti — Ta'lim sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_025","name":"Yangiliklar boti","icon":"📰","category_name":"Kontent & Yangiliklar","description":"Yangiliklar boti — Kontent & Yangiliklar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_026","name":"RSS agregator","icon":"📰","category_name":"Kontent & Yangiliklar","description":"RSS agregator — Kontent & Yangiliklar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_027","name":"Blog boti","icon":"📰","category_name":"Kontent & Yangiliklar","description":"Blog boti — Kontent & Yangiliklar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_028","name":"E'lonlar boti","icon":"📰","category_name":"Kontent & Yangiliklar","description":"E'lonlar boti — Kontent & Yangiliklar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_029","name":"Kunlik digest","icon":"📰","category_name":"Kontent & Yangiliklar","description":"Kunlik digest — Kontent & Yangiliklar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_030","name":"So'rovnoma boti","icon":"📰","category_name":"Kontent & Yangiliklar","description":"So'rovnoma boti — Kontent & Yangiliklar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_031","name":"Iqtiboslar boti","icon":"📰","category_name":"Kontent & Yangiliklar","description":"Iqtiboslar boti — Kontent & Yangiliklar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_032","name":"G'oronoskop","icon":"📰","category_name":"Kontent & Yangiliklar","description":"G'oronoskop — Kontent & Yangiliklar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_033","name":"Ob-havo boti","icon":"📰","category_name":"Kontent & Yangiliklar","description":"Ob-havo boti — Kontent & Yangiliklar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_034","name":"Memlar boti","icon":"📰","category_name":"Kontent & Yangiliklar","description":"Memlar boti — Kontent & Yangiliklar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_035","name":"Maqolalar boti","icon":"📰","category_name":"Kontent & Yangiliklar","description":"Maqolalar boti — Kontent & Yangiliklar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_036","name":"Newsletter boti","icon":"📰","category_name":"Kontent & Yangiliklar","description":"Newsletter boti — Kontent & Yangiliklar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_037","name":"AI chat bot","icon":"🤖","category_name":"AI & Utility","description":"AI chat bot — AI & Utility sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_038","name":"Tarjimon bot","icon":"🤖","category_name":"AI & Utility","description":"Tarjimon bot — AI & Utility sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_039","name":"Matn qisqartiruvchi","icon":"🤖","category_name":"AI & Utility","description":"Matn qisqartiruvchi — AI & Utility sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_040","name":"Rasm yaratish","icon":"🤖","category_name":"AI & Utility","description":"Rasm yaratish — AI & Utility sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_041","name":"QR kod bot","icon":"🤖","category_name":"AI & Utility","description":"QR kod bot — AI & Utility sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_042","name":"Havola qisqartiruvchi","icon":"🤖","category_name":"AI & Utility","description":"Havola qisqartiruvchi — AI & Utility sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_043","name":"Kalkulyator","icon":"🤖","category_name":"AI & Utility","description":"Kalkulyator — AI & Utility sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_044","name":"Valyuta konvertor","icon":"🤖","category_name":"AI & Utility","description":"Valyuta konvertor — AI & Utility sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_045","name":"Parol generator","icon":"🤖","category_name":"AI & Utility","description":"Parol generator — AI & Utility sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_046","name":"AI avatar","icon":"🤖","category_name":"AI & Utility","description":"AI avatar — AI & Utility sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_047","name":"Matnni ovozga","icon":"🤖","category_name":"AI & Utility","description":"Matnni ovozga — AI & Utility sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_048","name":"Kod yordamchisi","icon":"🤖","category_name":"AI & Utility","description":"Kod yordamchisi — AI & Utility sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_049","name":"Trivia bot","icon":"🎮","category_name":"O'yin & Zavq","description":"Trivia bot — O'yin & Zavq sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_050","name":"Dice o'yini","icon":"🎮","category_name":"O'yin & Zavq","description":"Dice o'yini — O'yin & Zavq sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_051","name":"Ruletka","icon":"🎮","category_name":"O'yin & Zavq","description":"Ruletka — O'yin & Zavq sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_052","name":"X o'yini","icon":"🎮","category_name":"O'yin & Zavq","description":"X o'yini — O'yin & Zavq sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_053","name":"Hangman","icon":"🎮","category_name":"O'yin & Zavq","description":"Hangman — O'yin & Zavq sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_054","name":"Kartalar o'yini","icon":"🎮","category_name":"O'yin & Zavq","description":"Kartalar o'yini — O'yin & Zavq sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_055","name":"Lotereya","icon":"🎮","category_name":"O'yin & Zavq","description":"Lotereya — O'yin & Zavq sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_056","name":"Slime simulator","icon":"🎮","category_name":"O'yin & Zavq","description":"Slime simulator — O'yin & Zavq sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_057","name":"Clicker","icon":"🎮","category_name":"O'yin & Zavq","description":"Clicker — O'yin & Zavq sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_058","name":"Puzzle bot","icon":"🎮","category_name":"O'yin & Zavq","description":"Puzzle bot — O'yin & Zavq sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_059","name":"Jang o'yini","icon":"🎮","category_name":"O'yin & Zavq","description":"Jang o'yini — O'yin & Zavq sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_060","name":"Quest bot","icon":"🎮","category_name":"O'yin & Zavq","description":"Quest bot — O'yin & Zavq sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_061","name":"Lead generator","icon":"💼","category_name":"Biznes & CRM","description":"Lead generator — Biznes & CRM sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_062","name":"Uchrashuv boti","icon":"💼","category_name":"Biznes & CRM","description":"Uchrashuv boti — Biznes & CRM sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_063","name":"Bron qilish","icon":"💼","category_name":"Biznes & CRM","description":"Bron qilish — Biznes & CRM sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_064","name":"Ticketing support","icon":"💼","category_name":"Biznes & CRM","description":"Ticketing support — Biznes & CRM sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_065","name":"FAQ bot","icon":"💼","category_name":"Biznes & CRM","description":"FAQ bot — Biznes & CRM sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_066","name":"Fikr-mulohaza","icon":"💼","category_name":"Biznes & CRM","description":"Fikr-mulohaza — Biznes & CRM sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_067","name":"Survey bot","icon":"💼","category_name":"Biznes & CRM","description":"Survey bot — Biznes & CRM sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_068","name":"CRM bot","icon":"💼","category_name":"Biznes & CRM","description":"CRM bot — Biznes & CRM sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_069","name":"Hisob-faktura","icon":"💼","category_name":"Biznes & CRM","description":"Hisob-faktura — Biznes & CRM sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_070","name":"HR bot","icon":"💼","category_name":"Biznes & CRM","description":"HR bot — Biznes & CRM sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_071","name":"Vazifalar boti","icon":"💼","category_name":"Biznes & CRM","description":"Vazifalar boti — Biznes & CRM sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_072","name":"Hisobot boti","icon":"💼","category_name":"Biznes & CRM","description":"Hisobot boti — Biznes & CRM sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_073","name":"Workout bot","icon":"🏥","category_name":"Sog'liq & Fitness","description":"Workout bot — Sog'liq & Fitness sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_074","name":"Diyeta boti","icon":"🏥","category_name":"Sog'liq & Fitness","description":"Diyeta boti — Sog'liq & Fitness sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_075","name":"Kaloriya hisoblash","icon":"🏥","category_name":"Sog'liq & Fitness","description":"Kaloriya hisoblash — Sog'liq & Fitness sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_076","name":"Eslatma boti","icon":"🏥","category_name":"Sog'liq & Fitness","description":"Eslatma boti — Sog'liq & Fitness sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_077","name":"Meditatsiya","icon":"🏥","category_name":"Sog'liq & Fitness","description":"Meditatsiya — Sog'liq & Fitness sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_078","name":"Symptom check","icon":"🏥","category_name":"Sog'liq & Fitness","description":"Symptom check — Sog'liq & Fitness sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_079","name":"Dorixona boti","icon":"🏥","category_name":"Sog'liq & Fitness","description":"Dorixona boti — Sog'liq & Fitness sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_080","name":"Qabulga yozilish","icon":"🏥","category_name":"Sog'liq & Fitness","description":"Qabulga yozilish — Sog'liq & Fitness sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_081","name":"Yoga bot","icon":"🏥","category_name":"Sog'liq & Fitness","description":"Yoga bot — Sog'liq & Fitness sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_082","name":"Qadam hisoblagich","icon":"🏥","category_name":"Sog'liq & Fitness","description":"Qadam hisoblagich — Sog'liq & Fitness sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_083","name":"Suv eslatmasi","icon":"🏥","category_name":"Sog'liq & Fitness","description":"Suv eslatmasi — Sog'liq & Fitness sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_084","name":"BMI kalkulyator","icon":"🏥","category_name":"Sog'liq & Fitness","description":"BMI kalkulyator — Sog'liq & Fitness sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_085","name":"Restoran buyurtma","icon":"🏠","category_name":"Xizmatlar","description":"Restoran buyurtma — Xizmatlar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_086","name":"Mehmonxona bron","icon":"🏠","category_name":"Xizmatlar","description":"Mehmonxona bron — Xizmatlar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_087","name":"Taksi boti","icon":"🏠","category_name":"Xizmatlar","description":"Taksi boti — Xizmatlar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_088","name":"Yetkazib berish","icon":"🏠","category_name":"Xizmatlar","description":"Yetkazib berish — Xizmatlar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_089","name":"Tozalash xizmati","icon":"🏠","category_name":"Xizmatlar","description":"Tozalash xizmati — Xizmatlar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_090","name":"Go'zallik saloni","icon":"🏠","category_name":"Xizmatlar","description":"Go'zallik saloni — Xizmatlar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_091","name":"Ko'chmas mulk","icon":"🏠","category_name":"Xizmatlar","description":"Ko'chmas mulk — Xizmatlar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_092","name":"Tadbirlar boti","icon":"🏠","category_name":"Xizmatlar","description":"Tadbirlar boti — Xizmatlar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_093","name":"Kino chipta","icon":"🏠","category_name":"Xizmatlar","description":"Kino chipta — Xizmatlar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_094","name":"Dorixona buyurtma","icon":"🏠","category_name":"Xizmatlar","description":"Dorixona buyurtma — Xizmatlar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_095","name":"Kir yuvish","icon":"🏠","category_name":"Xizmatlar","description":"Kir yuvish — Xizmatlar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_096","name":"Uy ta'mirlash","icon":"🏠","category_name":"Xizmatlar","description":"Uy ta'mirlash — Xizmatlar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_097","name":"Fayl konvertor","icon":"🔧","category_name":"Foydali vositalar","description":"Fayl konvertor — Foydali vositalar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_098","name":"Yuklab oluvchi","icon":"🔧","category_name":"Foydali vositalar","description":"Yuklab oluvchi — Foydali vositalar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_099","name":"Vaqt boti","icon":"🔧","category_name":"Foydali vositalar","description":"Vaqt boti — Foydali vositalar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_100","name":"Eslatmalar","icon":"🔧","category_name":"Foydali vositalar","description":"Eslatmalar — Foydali vositalar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_101","name":"To-do bot","icon":"🔧","category_name":"Foydali vositalar","description":"To-do bot — Foydali vositalar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_102","name":"Poll bot","icon":"🔧","category_name":"Foydali vositalar","description":"Poll bot — Foydali vositalar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_103","name":"Anonim chat","icon":"🔧","category_name":"Foydali vositalar","description":"Anonim chat — Foydali vositalar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_104","name":"Kalendar","icon":"🔧","category_name":"Foydali vositalar","description":"Kalendar — Foydali vositalar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_105","name":"Xarajat hisobi","icon":"🔧","category_name":"Foydali vositalar","description":"Xarajat hisobi — Foydali vositalar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_106","name":"Odat kuzatuvchisi","icon":"🔧","category_name":"Foydali vositalar","description":"Odat kuzatuvchisi — Foydali vositalar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_107","name":"Notepad bot","icon":"🔧","category_name":"Foydali vositalar","description":"Notepad bot — Foydali vositalar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_108","name":"Statistika boti","icon":"🔧","category_name":"Foydali vositalar","description":"Statistika boti — Foydali vositalar sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_109","name":"ChatGPT yordamchi","icon":"🧠","category_name":"ChatGPT & AI","description":"ChatGPT yordamchi — ChatGPT & AI sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_110","name":"AI kontent yozuvchi","icon":"🧠","category_name":"ChatGPT & AI","description":"AI kontent yozuvchi — ChatGPT & AI sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_111","name":"Kod yordamchisi AI","icon":"🧠","category_name":"ChatGPT & AI","description":"Kod yordamchisi AI — ChatGPT & AI sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_112","name":"AI tarjimon","icon":"🧠","category_name":"ChatGPT & AI","description":"AI tarjimon — ChatGPT & AI sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_113","name":"AI matn qisqartiruvchi","icon":"🧠","category_name":"ChatGPT & AI","description":"AI matn qisqartiruvchi — ChatGPT & AI sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_114","name":"AI tasvir yaratish","icon":"🧠","category_name":"ChatGPT & AI","description":"AI tasvir yaratish — ChatGPT & AI sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_115","name":"AI savol-javob","icon":"🧠","category_name":"ChatGPT & AI","description":"AI savol-javob — ChatGPT & AI sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_116","name":"AI email yozuvchi","icon":"🧠","category_name":"ChatGPT & AI","description":"AI email yozuvchi — ChatGPT & AI sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_117","name":"AI rejalashtiruvchi","icon":"🧠","category_name":"ChatGPT & AI","description":"AI rejalashtiruvchi — ChatGPT & AI sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_118","name":"AI quiz yaratuvchi","icon":"🧠","category_name":"ChatGPT & AI","description":"AI quiz yaratuvchi — ChatGPT & AI sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_119","name":"AI shaxsiy murabbiy","icon":"🧠","category_name":"ChatGPT & AI","description":"AI shaxsiy murabbiy — ChatGPT & AI sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_120","name":"AI tahlilchi","icon":"🧠","category_name":"ChatGPT & AI","description":"AI tahlilchi — ChatGPT & AI sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_121","name":"SMM panel","icon":"📱","category_name":"SMM","description":"SMM panel — SMM sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_122","name":"Post rejalashtiruvchi","icon":"📱","category_name":"SMM","description":"Post rejalashtiruvchi — SMM sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_123","name":"Instagram yordamchi","icon":"📱","category_name":"SMM","description":"Instagram yordamchi — SMM sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_124","name":"Kanal boshqaruvchi","icon":"📱","category_name":"SMM","description":"Kanal boshqaruvchi — SMM sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_125","name":"SMM hisobot boti","icon":"📱","category_name":"SMM","description":"SMM hisobot boti — SMM sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_126","name":"Auditoriya tahlili","icon":"📱","category_name":"SMM","description":"Auditoriya tahlili — SMM sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_127","name":"Kontent kalendari","icon":"📱","category_name":"SMM","description":"Kontent kalendari — SMM sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_128","name":"Reklama yordamchisi","icon":"📱","category_name":"SMM","description":"Reklama yordamchisi — SMM sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_129","name":"Obunachi hisobi","icon":"📱","category_name":"SMM","description":"Obunachi hisobi — SMM sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_130","name":"Story yaratuvchi","icon":"📱","category_name":"SMM","description":"Story yaratuvchi — SMM sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_131","name":"Hashtag generator","icon":"📱","category_name":"SMM","description":"Hashtag generator — SMM sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_132","name":"Engagement boti","icon":"📱","category_name":"SMM","description":"Engagement boti — SMM sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_133","name":"Crypto narx boti","icon":"₿","category_name":"Crypto","description":"Crypto narx boti — Crypto sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_134","name":"Portfolio tracker","icon":"₿","category_name":"Crypto","description":"Portfolio tracker — Crypto sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_135","name":"Trading signal bot","icon":"₿","category_name":"Crypto","description":"Trading signal bot — Crypto sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_136","name":"Coin ma'lumotlari","icon":"₿","category_name":"Crypto","description":"Coin ma'lumotlari — Crypto sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_137","name":"Trading ogohlantirish","icon":"₿","category_name":"Crypto","description":"Trading ogohlantirish — Crypto sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_138","name":"Airdrop bot","icon":"₿","category_name":"Crypto","description":"Airdrop bot — Crypto sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_139","name":"Staking kalkulyator","icon":"₿","category_name":"Crypto","description":"Staking kalkulyator — Crypto sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_140","name":"Gas tracker","icon":"₿","category_name":"Crypto","description":"Gas tracker — Crypto sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_141","name":"NFT yordamchi","icon":"₿","category_name":"Crypto","description":"NFT yordamchi — Crypto sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_142","name":"Whale alert","icon":"₿","category_name":"Crypto","description":"Whale alert — Crypto sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_143","name":"DEX skreener","icon":"₿","category_name":"Crypto","description":"DEX skreener — Crypto sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_144","name":"Crypto quiz","icon":"₿","category_name":"Crypto","description":"Crypto quiz — Crypto sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_145","name":"Avto e'lon boti","icon":"🚗","category_name":"Avtomobil","description":"Avto e'lon boti — Avtomobil sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_146","name":"Mashina qidiruv","icon":"🚗","category_name":"Avtomobil","description":"Mashina qidiruv — Avtomobil sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_147","name":"Avto narx baholash","icon":"🚗","category_name":"Avtomobil","description":"Avto narx baholash — Avtomobil sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_148","name":"Servis eslatmasi","icon":"🚗","category_name":"Avtomobil","description":"Servis eslatmasi — Avtomobil sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_149","name":"Yoqilg'i hisobi","icon":"🚗","category_name":"Avtomobil","description":"Yoqilg'i hisobi — Avtomobil sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_150","name":"Avto ijara boti","icon":"🚗","category_name":"Avtomobil","description":"Avto ijara boti — Avtomobil sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_151","name":"Haydovchi yordamchi","icon":"🚗","category_name":"Avtomobil","description":"Haydovchi yordamchi — Avtomobil sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_152","name":"Yo'l harakati qoidalari","icon":"🚗","category_name":"Avtomobil","description":"Yo'l harakati qoidalari — Avtomobil sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_153","name":"Avto sug'urta","icon":"🚗","category_name":"Avtomobil","description":"Avto sug'urta — Avtomobil sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_154","name":"Ehtiyot qismlar katalogi","icon":"🚗","category_name":"Avtomobil","description":"Ehtiyot qismlar katalogi — Avtomobil sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_155","name":"Avto tozalash bron","icon":"🚗","category_name":"Avtomobil","description":"Avto tozalash bron — Avtomobil sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_156","name":"Avto klub boti","icon":"🚗","category_name":"Avtomobil","description":"Avto klub boti — Avtomobil sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_157","name":"Sayohat rejalashtiruvchi","icon":"✈️","category_name":"Turizm & Sayohat","description":"Sayohat rejalashtiruvchi — Turizm & Sayohat sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_158","name":"Mehmonxona taqqoslash","icon":"✈️","category_name":"Turizm & Sayohat","description":"Mehmonxona taqqoslash — Turizm & Sayohat sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_159","name":"Chipta bron boti","icon":"✈️","category_name":"Turizm & Sayohat","description":"Chipta bron boti — Turizm & Sayohat sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_160","name":"Tur paketlari","icon":"✈️","category_name":"Turizm & Sayohat","description":"Tur paketlari — Turizm & Sayohat sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_161","name":"Shahar qo'llanmasi","icon":"✈️","category_name":"Turizm & Sayohat","description":"Shahar qo'llanmasi — Turizm & Sayohat sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_162","name":"Ob-havo prognozi","icon":"✈️","category_name":"Turizm & Sayohat","description":"Ob-havo prognozi — Turizm & Sayohat sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_163","name":"Valyuta hisobi","icon":"✈️","category_name":"Turizm & Sayohat","description":"Valyuta hisobi — Turizm & Sayohat sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_164","name":"Sayohat eslatmalari","icon":"✈️","category_name":"Turizm & Sayohat","description":"Sayohat eslatmalari — Turizm & Sayohat sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_165","name":"Ekskursiya bron","icon":"✈️","category_name":"Turizm & Sayohat","description":"Ekskursiya bron — Turizm & Sayohat sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_166","name":"Sayohat hamkori","icon":"✈️","category_name":"Turizm & Sayohat","description":"Sayohat hamkori — Turizm & Sayohat sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_167","name":"Viza yordamchisi","icon":"✈️","category_name":"Turizm & Sayohat","description":"Viza yordamchisi — Turizm & Sayohat sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_168","name":"Sayohat jurnali","icon":"✈️","category_name":"Turizm & Sayohat","description":"Sayohat jurnali — Turizm & Sayohat sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_169","name":"Sug'urta hisobi","icon":"🛡️","category_name":"Sug'urta","description":"Sug'urta hisobi — Sug'urta sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_170","name":"Polis eslatmasi","icon":"🛡️","category_name":"Sug'urta","description":"Polis eslatmasi — Sug'urta sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_171","name":"Avto sug'urta hisobi","icon":"🛡️","category_name":"Sug'urta","description":"Avto sug'urta hisobi — Sug'urta sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_172","name":"Uy sug'urta boti","icon":"🛡️","category_name":"Sug'urta","description":"Uy sug'urta boti — Sug'urta sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_173","name":"Sog'liq sug'urta","icon":"🛡️","category_name":"Sug'urta","description":"Sog'liq sug'urta — Sug'urta sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_174","name":"Sug'urta taqqoslash","icon":"🛡️","category_name":"Sug'urta","description":"Sug'urta taqqoslash — Sug'urta sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_175","name":"To'lov jadvali","icon":"🛡️","category_name":"Sug'urta","description":"To'lov jadvali — Sug'urta sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_176","name":"Da'vo yuborish","icon":"🛡️","category_name":"Sug'urta","description":"Da'vo yuborish — Sug'urta sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_177","name":"Sug'urta maslahatchisi","icon":"🛡️","category_name":"Sug'urta","description":"Sug'urta maslahatchisi — Sug'urta sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_178","name":"Polis arxivi","icon":"🛡️","category_name":"Sug'urta","description":"Polis arxivi — Sug'urta sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_179","name":"Sug'urta quiz","icon":"🛡️","category_name":"Sug'urta","description":"Sug'urta quiz — Sug'urta sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_180","name":"Bonus hisobi","icon":"🛡️","category_name":"Sug'urta","description":"Bonus hisobi — Sug'urta sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_181","name":"Kvartira qidiruv","icon":"🏢","category_name":"Ko'chmas mulk","description":"Kvartira qidiruv — Ko'chmas mulk sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_182","name":"Uy sotish boti","icon":"🏢","category_name":"Ko'chmas mulk","description":"Uy sotish boti — Ko'chmas mulk sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":false},{"key":"tpl_183","name":"Ijara hisobi","icon":"🏢","category_name":"Ko'chmas mulk","description":"Ijara hisobi — Ko'chmas mulk sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_184","name":"Emlak katalogi","icon":"🏢","category_name":"Ko'chmas mulk","description":"Emlak katalogi — Ko'chmas mulk sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_185","name":"Narx baholash","icon":"🏢","category_name":"Ko'chmas mulk","description":"Narx baholash — Ko'chmas mulk sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_186","name":"Ko'rik bron qilish","icon":"🏢","category_name":"Ko'chmas mulk","description":"Ko'rik bron qilish — Ko'chmas mulk sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_187","name":"Hujjat yordamchisi","icon":"🏢","category_name":"Ko'chmas mulk","description":"Hujjat yordamchisi — Ko'chmas mulk sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_188","name":"Ipoteka kalkulyator","icon":"🏢","category_name":"Ko'chmas mulk","description":"Ipoteka kalkulyator — Ko'chmas mulk sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_189","name":"Yangi qurilishlar","icon":"🏢","category_name":"Ko'chmas mulk","description":"Yangi qurilishlar — Ko'chmas mulk sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_190","name":"Tijorat mulki","icon":"🏢","category_name":"Ko'chmas mulk","description":"Tijorat mulki — Ko'chmas mulk sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_191","name":"Emlak xabarlar","icon":"🏢","category_name":"Ko'chmas mulk","description":"Emlak xabarlar — Ko'chmas mulk sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true},{"key":"tpl_192","name":"Mulk eslatmalari","icon":"🏢","category_name":"Ko'chmas mulk","description":"Mulk eslatmalari — Ko'chmas mulk sohasi uchun tayyor bot. 1 daqiqada ishga tushirib, o'zingizga moslashtiring.","premium":true}];
-  var PRICES = [{"key":"free","label":"Free","emoji":"🆓","price":0,"days":0,"description":"Bepul boshlang'ich reja","perks":["1 ta bot yaratish","32 ta bepul shablon","Kuniga 10 ta xabar","Asosiy yordam"]},{"key":"standart","label":"Standart","emoji":"✅","price":60000,"days":30,"description":"Eng mashhur reja — 30 kun","perks":["10 tagacha bot","192 shablon — hammasi","Cheksiz xabar va so'rov","Custom bot quruvchi","Tezkor inline menyu — kutish yo'q"]},{"key":"ultra","label":"Ultra Pro","emoji":"👑","price":150000,"days":90,"description":"Professional reja — 90 kun","perks":["Cheksiz botlar","Barcha shablonlar + custom quruvchi","Cheksiz xabar va so'rov","Ustuvor yordam va tezkor javob","Shaxsiy botlar va ustuvor quruvchi","VIP status va barcha kelgusi funksiyalar"]}];
-  var tg = window.Telegram ? Telegram.WebApp : null;
-
-  function applyTheme(){
-    var root=document.documentElement, p=(tg&&tg.themeParams)||{};
-    root.setAttribute('data-theme',(tg&&tg.colorScheme)||'dark');
-    var map={bg_color:'--bg',secondary_bg_color:'--card2',text_color:'--text',hint_color:'--muted',link_color:'--accent2',button_color:'--accent',button_text_color:'--accent-text'};
-    Object.keys(map).forEach(function(k){ if(p[k]) root.style.setProperty(map[k],p[k]); });
-    var meta=document.querySelector('meta[name="theme-color"]'); if(meta&&p.bg_color) meta.setAttribute('content',p.bg_color);
-  }
-  if(tg){ tg.expand(); applyTheme(); tg.onEvent('themeChanged',applyTheme); } else applyTheme();
-
-  var CARD = document.getElementById('cardNumber').textContent;
-  var ADMIN = 'THE_VENOX';
-  function haptic(){ if(tg&&tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light'); }
-  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
-  function money(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,' '); }
-  function categories(){ var a=['all']; DATA.forEach(function(x){if(a.indexOf(x.category_name)<0)a.push(x.category_name);}); return a; }
-
-  document.getElementById('statTpl').textContent=DATA.length;
-  document.getElementById('statCat').textContent=categories().length;
-
-  function copyText(text){
-    haptic();
-    if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(text).catch(function(){ fallbackCopy(text); });
-    } else { fallbackCopy(text); }
-  }
-  function fallbackCopy(text){
-    var area=document.createElement('textarea'); area.value=text;
-    area.style.position='fixed'; area.style.opacity='0'; document.body.appendChild(area);
-    area.select();
-    try{ document.execCommand('copy'); }catch(err){}
-    document.body.removeChild(area);
-  }
-  function copied(el,message){
-    copyText(el.getAttribute('data-copy')||'');
-    var note=document.getElementById('copiedNote');
-    if(note){ note.textContent=message||'✅ Nusxalandi — endi bu matnni botga yuboring.'; }
-    el.textContent='✅ Nusxalandi'; var self=el;
-    setTimeout(function(){ self.textContent='📋 Nusxalash'; },1800);
-  }
-
-  var overlay=document.getElementById('overlay');
-  function openModal(html){
-    document.getElementById('modalBody').innerHTML=html+
-      '<div class="copied" id="copiedNote"></div><div class="modal-actions" id="modalActions"></div>';
-    overlay.classList.add('on'); haptic();
-  }
-  function closeModal(){ overlay.classList.remove('on'); }
-  document.getElementById('modalClose').onclick=closeModal;
-  overlay.onclick=function(e){ if(e.target===overlay) closeModal(); };
-  document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeModal(); });
-  function modalButton(label,text){
-    var b=document.createElement('button'); b.className='btn'; b.type='button';
-    b.textContent=label; b.setAttribute('data-copy',text);
-    b.onclick=function(){ copied(this); };
-    document.getElementById('modalActions').appendChild(b);
-  }
-
-  function showTemplate(x){
-    openModal('<h3>'+x.icon+' '+esc(x.name)+'</h3>'+
-      '<div class="meta">'+esc(x.category_name)+' • '+(x.premium?'👑 Premium':'🆓 Bepul')+'</div>'+
-      '<div class="desc">'+esc(x.description)+'</div>'+
-      '<p class="meta">Mini App yopilmaydi. Kodni nusxalab, botga yuboring — u shablon haqida maslahat beradi.</p>');
-    modalButton('📋 Shablon kodini nusxalash', x.key);
-    modalButton('🤖 Maslahat matnini nusxalash', 'Assalomu alaykum, '+x.name+' ('+x.key+') shabloni haqida maslahat bering.');
-  }
-  function showPlan(p){
-    var price=p.price?money(p.price)+' UZS':'Bepul';
-    openModal('<h3>'+p.emoji+' '+esc(p.label)+'</h3>'+
-      '<div class="meta">'+esc(p.description)+(p.days?' • '+p.days+' kun':'')+'</div>'+
-      '<div class="price-big">'+price+'</div><ul>'+
-      p.perks.map(function(v){return '<li>'+esc(v)+'</li>';}).join('')+'</ul>');
-    modalButton('💳 Karta raqamini nusxalash', CARD);
-    if(p.price){ modalButton('🧾 Chek matnini nusxalash', 'Assalomu alaykum, '+p.label+' tarifi uchun '+price+' to\'lov qildim. Chek yuboraman.'); }
-    else { modalButton('🚀 Boshlash uchun /build nusxalash', '/build'); }
-  }
-  function showRequest(payload){
-    openModal('<h3>✅ Buyurtma tayyor</h3>'+
-      '<div class="desc"><b>'+esc(payload.name)+'</b><br>'+esc(payload.type)+' • '+esc(payload.deadline)+'<br>'+
-      'Aloqa: '+esc(payload.contact)+'<br><br>'+esc(payload.description)+'</div>'+
-      '<p class="meta">Matnni nusxalab, Telegram botga yuboring — admin ko\'rib chiqadi.</p>');
-    modalButton('📋 Buyurtma matnini nusxalash',
-      '🛠 Maxsus bot buyurtmasi\nNomi: '+payload.name+'\nTuri: '+payload.type+'\nMuddat: '+payload.deadline+
-      '\nAloqa: '+payload.contact+'\nTavsif: '+payload.description);
-  }
-
-  document.querySelectorAll('.tab').forEach(function(tab){
-    tab.onclick=function(){
-      document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('on');});
-      document.querySelectorAll('section').forEach(function(s){s.classList.remove('on');});
-      tab.classList.add('on'); document.getElementById(tab.dataset.tab).classList.add('on');
-      haptic(); window.scrollTo({top:0,behavior:'smooth'});
-    };
-  });
-
-  var state={cat:'all',q:''};
-  function renderChips(){
-    var all=categories(),html='';
-    all.forEach(function(c,i){ html+='<div class="chip'+(state.cat===c?' on':'')+'" data-i="'+i+'">'+(c==='all'?'Hammasi':esc(c))+'</div>'; });
-    var root=document.getElementById('chips'); root.innerHTML=html;
-    var nodes=root.children;
-    for(var i=0;i<nodes.length;i++){(function(n){n.onclick=function(){state.cat=all[parseInt(n.getAttribute('data-i'),10)];haptic();renderChips();renderTemplates();};})(nodes[i]);}
-  }
-  function renderTemplates(){
-    var q=state.q.toLowerCase();
-    var list=DATA.filter(function(x){return (state.cat==='all'||x.category_name===state.cat)&&(x.name.toLowerCase().indexOf(q)>=0||x.description.toLowerCase().indexOf(q)>=0);});
-    document.getElementById('count').textContent=list.length+' ta shablon topildi';
-    var html='';
-    list.forEach(function(x,i){ html+='<div class="tpl" data-i="'+i+'"><div class="ic">'+x.icon+'</div><div class="nm">'+esc(x.name)+'</div><div class="ct">'+esc(x.category_name)+'</div><span class="badge'+(x.premium?' p':'')+'">'+(x.premium?'👑 Premium':'🆓 Bepul')+'</span><div class="go">→</div></div>'; });
-    var root=document.getElementById('grid'); root.innerHTML=html||'<div class="empty">Hech narsa topilmadi.</div>';
-    var cards=root.querySelectorAll('.tpl');
-    for(var i=0;i<cards.length;i++){(function(c){c.onclick=function(){showTemplate(list[parseInt(c.getAttribute('data-i'),10)]);};})(cards[i]);}
-  }
-  document.getElementById('q').addEventListener('input',function(e){state.q=e.target.value.trim();renderTemplates();});
-
-  function renderPlans(){
-    var html='';
-    PRICES.forEach(function(p){
-      var price=p.price?money(p.price)+' UZS':'Bepul';
-      var perks=p.perks.map(function(v){return '<li>'+esc(v)+'</li>';}).join('');
-      html+='<div class="plan'+(p.key==='standart'?' hot':'')+'">'+(p.key==='standart'?'<div class="ribbon">ENG MASHHUR</div>':'')+
-        '<div class="pname">'+p.emoji+' '+esc(p.label)+'</div><div class="pdesc">'+esc(p.description)+'</div>'+
-        '<div class="price">'+price+(p.days?' <small>/ '+p.days+' kun</small>':'')+'</div><ul>'+perks+'</ul>'+
-        '<button class="btn" data-tier="'+p.key+'" type="button">'+(p.price?'Batafsil ko\'rish':'Bepul boshlash')+'</button></div>';
-    });
-    var root=document.getElementById('plans'); root.innerHTML=html;
-    root.querySelectorAll('button[data-tier]').forEach(function(b){b.onclick=function(){showPlan(PRICES.filter(function(p){return p.key===b.dataset.tier;})[0]);};});
-  }
-  document.querySelectorAll('button[data-plan]').forEach(function(b){
-    b.onclick=function(){ showPlan(PRICES.filter(function(p){return p.key===b.dataset.plan;})[0]); };
-  });
-
-  document.getElementById('copyCard').onclick=function(){ copied(this,'✅ Karta raqami nusxalandi.'); };
-  document.getElementById('copyCard').setAttribute('data-copy',CARD);
-
-  document.getElementById('requestForm').addEventListener('submit',function(e){
-    e.preventDefault();
-    var payload={name:document.getElementById('fName').value.trim(),contact:document.getElementById('fContact').value.trim(),type:document.getElementById('fType').value,deadline:document.getElementById('fDeadline').value,description:document.getElementById('fDesc').value.trim()};
-    if(!payload.name||!payload.contact||!payload.description) return;
-    showRequest(payload); document.getElementById('okMsg').classList.add('on'); this.reset();
-  });
-
-  function initBuilder(){
-    var sel=document.getElementById('bTemplate');
-    var options='<option value="">— Shablonsiz, o\'z g\'oyam —</option>';
-    DATA.forEach(function(x){ options+='<option value="'+x.key+'">'+esc(x.icon+' '+x.name+' • '+x.category_name)+'</option>'; });
-    sel.innerHTML=options;
-    sel.onchange=function(){
-      var t=DATA.filter(function(x){return x.key===sel.value;})[0];
-      if(t){ document.getElementById('bName').value=t.name; document.getElementById('bIdea').value=t.description; }
-    };
-    document.getElementById('bClear').onclick=function(){
-      document.getElementById('builderForm').reset();
-      var result=document.getElementById('builderResult');
-      result.classList.remove('on'); result.innerHTML='';
-    };
-    document.getElementById('builderForm').addEventListener('submit',function(e){
-      e.preventDefault();
-      var t=DATA.filter(function(x){return x.key===sel.value;})[0];
-      var idea=document.getElementById('bIdea').value.trim();
-      var name=document.getElementById('bName').value.trim()||(t?t.name:'Mening botim');
-      if(!idea && t) idea=t.description;
-      if(!idea) return;
-      var low=idea.toLowerCase();
-      var modules=[];
-      if(/savat|buyurtma|katalog|mahsulot|do'kon|sotuv/.test(low)) modules.push('Katalog → Savatcha → Buyurtma → To\'lov');
-      if(/bron|uchrashuv|qabul|vaqt|restoran/.test(low)) modules.push('Sana/vaqt tanlash → Tasdiqlash → Eslatma');
-      if(/faq|ma'lumot|savol|javob|yordam/.test(low)) modules.push('FAQ / Savol-javob bazasi');
-      if(/ai|gpt|tahlil|matn|tarjima/.test(low)) modules.push('AI so\'rov → Natija → Tahrirlash');
-      if(/kripto|crypto|narx|portfel/.test(low)) modules.push('Narx/portfel → Ogohlantirish → Hisobot');
-      if(!modules.length) modules=['Xush kelibsiz → Menyu → Ma\'lumot','Aloqa / Yordam'];
-      var commands=[
-        '/start — tanishtirish va asosiy tugmalar',
-        '/menu — doimiy menyu',
-        '/help — foydalanish tartibi',
-        '/order — asosiy harakat (buyurtma/bron/so\'rov)'
-      ];
-      if(/admin|hisobot|statistika/.test(low)) commands.push('/admin — buyurtmalar va statistika');
-      var buttons=['Boshlash','Katalog / Ma\'lumot','Buyurtma / Bron','Aloqa'];
-      var steps=[
-        '1. BotFather orqali yangi bot yaratib, token oling.',
-        '2. Venox Yordamchi Standart yoki Ultra Pro tarifini tanlang.',
-        '3. Shu tuzilmani nusxalab, ishlab chiquvchiga yuboring.',
-        '4. /start, /menu, /help va asosiy harakat komandalarini sinang.',
-        '5. 5-10 haqiqiy foydalanuvchi bilan test qilib, menyuni qisqartiring.'
-      ];
-      var money='Obuna (Standart 60,000 UZS / Ultra Pro 150,000 UZS), buyurtma komissiyasi yoki premium funksiya (AI tahlil, hisobot).';
-      var plain='🤖 '+name+'\n\nMAQSAD: '+idea+'\n\nOQIM:\n- '+modules.join('\n- ')+
-        '\n\nKOMANDALAR:\n- '+commands.join('\n- ')+
-        '\n\nTUGMALAR: '+buttons.join(' | ')+
-        '\n\nSOZLASH:\n- '+steps.join('\n- ')+
-        '\n\nMONETIZATSIYA: '+money;
-      var block=function(title,items){ return '<div class="build-block"><b>'+title+'</b>'+items.map(function(x){return '<div class="step">'+esc(x)+'</div>';}).join('')+'</div>'; };
-      var result=document.getElementById('builderResult');
-      result.innerHTML='<div class="build-result on">'+
-        '<h3>✨ '+esc(name)+' — tayyor bot tuzilmasi</h3>'+
-        '<p class="build-tip">Mini App yopilmaydi. Tuzilmani nusxalab, keyinroq foydalaning.</p>'+
-        block('🎯 Foydalanuvchi oqimi',modules)+
-        block('⌨️ Komandalar',commands)+
-        block('🔘 Menyu tugmalari',buttons)+
-        block('🛠 Sozlash bosqichlari',steps)+
-        block('💰 Monetizatsiya',[money])+
-        '<div class="row"><button class="btn" type="button" data-copy="'+esc(plain)+'" id="copyBlueprint">📋 Butun tuzilmani nusxalash</button>'+
-        '<button class="btn alt" type="button" data-copy="'+esc(commands.join('\n'))+'" id="copyCommands">⌨️ Komandalarni nusxalash</button></div>'+
-        '</div>';
-      haptic();
-      document.getElementById('copyBlueprint').onclick=function(){ copied(this,'✅ Tuzilma nusxalandi.'); };
-      document.getElementById('copyCommands').onclick=function(){ copied(this,'✅ Komandalar nusxalandi.'); };
-      result.scrollIntoView({behavior:'smooth',block:'start'});
-    });
-  }
-
-  renderChips(); renderTemplates(); renderPlans(); initBuilder();
-</script>
+  <script src="app.js"></script>
 </body>
 </html>
