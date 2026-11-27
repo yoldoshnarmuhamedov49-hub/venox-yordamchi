@@ -1,13 +1,12 @@
-# Render blueprint for Venox Yordamchi
+# Render blueprint for Venox Yordamchi (pure Telegram bot, no web server)
 # Dashboard: https://dashboard.render.com/blueprints
-# Create a new Blueprint and point it at this repository (render.yaml is auto-detected).
 
 databases: []
 
 services:
-  # 24/7 Telegram bot — long polling background worker.
+  # 24/7 Telegram bot — all features run through inline keyboards.
   - type: worker
-    name: venox-yordamchi-bot
+    name: venox-yordamchi
     env: python
     region: oregon
     plan: free
@@ -22,26 +21,6 @@ services:
         value: "THE_VENOX"
       - key: PAYMENT_CARD
         value: "5614 6830 1549 1525"
-      # Public URL of the miniapp web service below (Render -> Web Service -> URL).
-      - key: MINI_APP_URL
-        sync: false
-      - key: DATABASE_PATH
-        value: "data/venox.db"
-      - key: LOG_LEVEL
-        value: "INFO"
-
-  # Web Mini App: template catalog + published bot pages.
-  - type: web
-    name: venox-yordamchi-miniapp
-    env: python
-    region: oregon
-    # "free" sleeps after inactivity (first open shows a wake-up screen).
-    # Use "starter" for an always-on, instantly loading dashboard.
-    plan: free
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "python bot.py --webapp"
-    healthCheckPath: /health
-    envVars:
       - key: DATABASE_PATH
         value: "data/venox.db"
       - key: LOG_LEVEL

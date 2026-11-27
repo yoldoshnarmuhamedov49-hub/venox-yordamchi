@@ -1,7 +1,7 @@
 """Storage and shared configuration for the Venox Yordamchi SaaS platform.
 
 The module is intentionally dependency free (only the standard library) so it
-can be imported by both the Telegram worker and the Web Mini App server.
+can be imported by the Telegram bot without any external server.
 
 SQLite is used by default.  Set ``DATABASE_PATH`` to a path on a persistent
 volume when deploying so accounts, bots and payment records survive restarts.
@@ -43,7 +43,6 @@ BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
 ADMIN_ID = int(os.getenv("ADMIN_ID", "8527026238"))
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "THE_VENOX").lstrip("@")
 PAYMENT_CARD = os.getenv("PAYMENT_CARD", "5614 6830 1549 1525").strip()
-MINI_APP_URL = os.getenv("MINI_APP_URL", "").strip().rstrip("/")
 GITHUB_REPO = os.getenv("GITHUB_REPO", "").strip()
 DEFAULT_DB_PATH = os.getenv("DATABASE_PATH", "venox.db")
 
@@ -64,7 +63,7 @@ PLANS: Dict[str, Dict[str, Any]] = {
         "description": "Bepul boshlang'ich reja",
         "perks": [
             "1 ta bot yaratish",
-            "24 ta bepul shablon",
+            "32 ta bepul shablon",
             "Kuniga 10 ta xabar",
             "Asosiy yordam",
         ],
@@ -78,10 +77,10 @@ PLANS: Dict[str, Dict[str, Any]] = {
         "description": "Eng mashhur reja — 30 kun",
         "perks": [
             "10 tagacha bot",
-            "100+ shablon — hammasi",
+            "192 shablon — hammasi",
             "Cheksiz xabar va so'rov",
             "Custom bot quruvchi",
-            "Web Mini App ulanishi",
+            "Tezkor inline menyu — kutish yo'q",
         ],
     },
     ULTRA: {
@@ -96,7 +95,7 @@ PLANS: Dict[str, Dict[str, Any]] = {
             "Barcha shablonlar + custom quruvchi",
             "Cheksiz xabar va so'rov",
             "Ustuvor yordam va tezkor javob",
-            "Shaxsiy Web Mini App",
+            "Shaxsiy botlar va ustuvor quruvchi",
             "VIP status va barcha kelgusi funksiyalar",
         ],
     },
@@ -130,7 +129,7 @@ TIER_LIMITS: Dict[str, Dict[str, Any]] = {
 }
 
 # --------------------------------------------------------------------------- #
-# 100+ ready-made bot templates
+# 192 ready-made bot templates
 # --------------------------------------------------------------------------- #
 CATEGORIES: List[Dict[str, str]] = [
     {"key": "ecommerce", "name": "E-commerce", "icon": "🛒"},
@@ -145,6 +144,10 @@ CATEGORIES: List[Dict[str, str]] = [
     {"key": "chatgpt", "name": "ChatGPT & AI", "icon": "🧠"},
     {"key": "smm", "name": "SMM", "icon": "📱"},
     {"key": "crypto", "name": "Crypto", "icon": "₿"},
+    {"key": "avto", "name": "Avtomobil", "icon": "🚗"},
+    {"key": "travel", "name": "Turizm & Sayohat", "icon": "✈️"},
+    {"key": "insurance", "name": "Sug'urta", "icon": "🛡️"},
+    {"key": "realty", "name": "Ko'chmas mulk", "icon": "🏢"},
 ]
 
 _TEMPLATE_NAMES: Dict[str, List[str]] = {
@@ -208,13 +211,33 @@ _TEMPLATE_NAMES: Dict[str, List[str]] = {
         "Trading ogohlantirish", "Airdrop bot", "Staking kalkulyator", "Gas tracker",
         "NFT yordamchi", "Whale alert", "DEX skreener", "Crypto quiz",
     ],
+    "avto": [
+        "Avto e'lon boti", "Mashina qidiruv", "Avto narx baholash", "Servis eslatmasi",
+        "Yoqilg'i hisobi", "Avto ijara boti", "Haydovchi yordamchi", "Yo'l harakati qoidalari",
+        "Avto sug'urta", "Ehtiyot qismlar katalogi", "Avto tozalash bron", "Avto klub boti",
+    ],
+    "travel": [
+        "Sayohat rejalashtiruvchi", "Mehmonxona taqqoslash", "Chipta bron boti", "Tur paketlari",
+        "Shahar qo'llanmasi", "Ob-havo prognozi", "Valyuta hisobi", "Sayohat eslatmalari",
+        "Ekskursiya bron", "Sayohat hamkori", "Viza yordamchisi", "Sayohat jurnali",
+    ],
+    "insurance": [
+        "Sug'urta hisobi", "Polis eslatmasi", "Avto sug'urta hisobi", "Uy sug'urta boti",
+        "Sog'liq sug'urta", "Sug'urta taqqoslash", "To'lov jadvali", "Da'vo yuborish",
+        "Sug'urta maslahatchisi", "Polis arxivi", "Sug'urta quiz", "Bonus hisobi",
+    ],
+    "realty": [
+        "Kvartira qidiruv", "Uy sotish boti", "Ijara hisobi", "Emlak katalogi",
+        "Narx baholash", "Ko'rik bron qilish", "Hujjat yordamchisi", "Ipoteka kalkulyator",
+        "Yangi qurilishlar", "Tijorat mulki", "Emlak xabarlar", "Mulk eslatmalari",
+    ],
 }
 
 
 def build_template_catalog() -> List[Dict[str, Any]]:
     """Return the full catalogue of ready-made bot templates.
 
-    Two templates in every category stay free (24 total); the rest require a
+    Two templates in every category stay free (32 total); the rest require a
     paid plan.  The returned configs are plain JSON-serialisable dictionaries.
     """
     catalog: List[Dict[str, Any]] = []

@@ -1,35 +1,21 @@
-"""Venox Yordamchi — SaaS Telegram Bot Constructor.
+"""Venox Yordamchi — lightning-fast inline Telegram Bot Constructor.
 
-Features
---------
-* Web Mini App platform with 100+ ready-made bot templates
-* Custom bot builder (step-by-step conversation)
-* Free / Standart / Ultra (Pro) subscription tiers
-* Admin (VIP, unlimited) panel with manual receipt verification
-* Built-in Web Mini App HTTP server for Render / any ASGI-free host
+Everything happens inside Telegram with rich inline keyboards: a searchable
+template catalog (192 templates in 16 categories), a custom bot builder,
+Free / Standart / Ultra Pro tiers, and card payments with receipt review.
 
-Run locally (Telegram bot + Web Mini App in one process):
+Run locally / on Render:
     python bot.py
-
-HTTP-only maintenance mode (optional):
-    python bot.py --webapp
-
-Configuration is read from environment variables; see .env.example.
 """
 
 from __future__ import annotations
 
-import base64
 import html
 import json
 import logging
 import os
-import sys
-import threading
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from io import BytesIO
 from typing import Any, Dict, Optional, Tuple
-from urllib.parse import parse_qs, urlparse
 
 from telegram import (
     BotCommand,
@@ -39,7 +25,6 @@ from telegram import (
     InputFile,
     ReplyKeyboardMarkup,
     Update,
-    WebAppInfo,
 )
 from telegram.constants import ParseMode
 from telegram.ext import (
@@ -59,11 +44,9 @@ from database import (
     BOT_TOKEN,
     DEFAULT_DB_PATH,
     FREE,
-    MINI_APP_URL,
     PAYMENT_CARD,
     PLANS,
     STANDART,
-    TZ,
     ULTRA,
     Database,
 )
@@ -76,11 +59,11 @@ log = logging.getLogger("venox")
 os.makedirs(os.path.dirname(os.path.abspath(DEFAULT_DB_PATH)), exist_ok=True)
 db = Database()
 
-APP_URL = (MINI_APP_URL or os.getenv("RENDER_EXTERNAL_URL", "")).strip().rstrip("/")
-
 B_NAME, B_WELCOME, B_BUTTONS, B_ANSWER, B_CONFIRM = range(5)
 A_BROADCAST, A_GRANT = range(10, 12)
+R_NAME, R_CONTACT, R_DESC = range(20, 23)
 BUILD_STATE: Dict[str, Any] = {}
+REQUEST_STATE: Dict[int, Dict[str, str]] = {}
 
 # --------------------------------------------------------------------------- #
 # Small helpers
@@ -100,19 +83,6 @@ def tier_label(tier: str) -> str:
 
 def check_limit(value: Optional[int], used: int) -> bool:
     return value is None or used < value
-
-
-def make_bot_url(bot_id: int, config: Dict[str, Any]) -> str:
-    """Build a self-contained Mini App link (config encoded in the URL)."""
-    payload = {
-        "name": config.get("name", "Bot"),
-        "welcome": config.get("welcome", ""),
-        "buttons": config.get("buttons", []),
-    }
-    encoded = base64.urlsafe_b64encode(
-        json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    ).decode("ascii").rstrip("=")
-    return f"{APP_URL}/b/{bot_id}?c={encoded}"
 
 
 # --------------------------------------------------------------------------- #
@@ -144,13 +114,11 @@ def main_menu_keyboard(user_id: int) -> InlineKeyboardMarkup:
             InlineKeyboardButton("💳 Tariflar", callback_data="plans"),
             InlineKeyboardButton("📊 Limitim", callback_data="usage"),
         ],
-        [InlineKeyboardButton("❓ Yordam", callback_data="help")],
+        [
+            InlineKeyboardButton("🛠 Maxsus bot buyurtmasi", callback_data="request"),
+            InlineKeyboardButton("❓ Yordam", callback_data="help"),
+        ],
     ]
-    if APP_URL:
-        rows.insert(
-            1,
-            [InlineKeyboardButton("🚀 Mini App ni ochish", web_app=WebAppInfo(url=APP_URL))],
-        )
     if db.is_admin(user_id):
         rows.append([InlineKeyboardButton("⚙️ Admin panel", callback_data="admin")])
     rows.append([InlineKeyboardButton("❌ Menyuni yopish", callback_data="close")])
@@ -177,9 +145,10 @@ def build_view(user_id: int, view: str, payload: str = "") -> Tuple[str, Optiona
         name = user.get("first_name") or "do'stim"
         text = (
             f"Assalomu alaykum, {esc(name)}! 👋\n\n"
-            "Men <b>Venox Yordamchi</b> — Web Mini App platformasi, "
-            f"<b>{db.template_count()}+ tayyor bot shabloni</b> va o'zingizning "
-            "botingizni qurish quruvchisi.\n\n"
+            "Men <b>Venox Yordamchi</b> — Telegram ichida ishlaydigan bot "
+            f"quruvchi: <b>{db.template_count()} ta tayyor shablon</b>, "
+            f"{len(db.categories())} kategoriya va o'zingizning botingizni qurish "
+            "quruvchisi.\n\n"
             f"Sizning tarifingiz: {tier_label(db.effective_tier(user_id))}\n"
             "Quyidagi bo'limlardan birini tanlang:"
         )
@@ -187,22 +156,21 @@ def build_view(user_id: int, view: str, payload: str = "") -> Tuple[str, Optiona
 
     if view == "catalog":
         categories = db.categories()
-        rows = []
-        for cat in categories:
-            rows.append(
-                [
-                    InlineKeyboardButton(
-                        f"{cat['icon']} {cat['name']} ({cat['total']})",
-                        callback_data=f"cat:{cat['key']}",
-                    )
-                ]
+        buttons = [
+            InlineKeyboardButton(
+                f"{cat['icon']} {cat['name']} ({cat['total']})",
+                callback_data=f"cat:{cat['key']}",
             )
+            for cat in categories
+        ]
+        rows = [buttons[i : i + 2] for i in range(0, len(buttons), 2)]
         rows.append([InlineKeyboardButton("🔍 Barcha shablonlar", callback_data="cat:all")])
         rows.append([InlineKeyboardButton("🏠 Asosiy menyu", callback_data="menu")])
         text = (
             "🏪 <b>Botlar kutubxonasi</b>\n\n"
-            f"Jami <b>{db.template_count()}</b> ta tayyor bot shabloni mavjud. "
-            "Kategoriyani tanlang yoki mini app orqali qidirib toping."
+            f"Jami <b>{db.template_count()}</b> ta tayyor bot shabloni, "
+            f"<b>{len(categories)}</b> kategoriya mavjud. "
+            "Kategoriyani tanlang — barchasi shu yerda, tashqi sahifa yo'q."
         )
         return text, InlineKeyboardMarkup(rows)
 
@@ -318,8 +286,6 @@ def build_view(user_id: int, view: str, payload: str = "") -> Tuple[str, Optiona
             f"💬 Xush kelibsiz: {esc(cfg.get('welcome', '—'))}\n"
             f"🔘 Tugmalar: {esc(buttons)}\n"
         )
-        if bot.get("mini_app_url"):
-            text += f"\n🌐 Mini App: {esc(bot['mini_app_url'])}"
         rows = []
         if bot["status"] != "published":
             rows.append([InlineKeyboardButton("🚀 Nashr qilish", callback_data=f"publish:{bot_id}")])
@@ -396,7 +362,7 @@ def build_view(user_id: int, view: str, payload: str = "") -> Tuple[str, Optiona
             f"💬 Bugungi xabarlar: {usage['used']} / {msgs_text} (qoldi: {remain_text})\n"
             f"🏪 Shablonlar: {'hammasi' if limits['premium_templates'] else 'faqat bepul'}\n"
             f"🔧 Custom quruvchi: {'ha' if limits['custom_builder'] else 'yo‘q'}\n"
-            f"🌐 Mini App: {'ha' if limits['web_app'] else 'yo‘q'}\n"
+            f"⚡ Tezkor rejim: ha (faqat Telegram)\n"
             f"👑 VIP/Admin: {'ha' if db.is_admin(user_id) or tier in (STANDART, ULTRA) else 'yo‘q'}"
         )
         markup = InlineKeyboardMarkup(
@@ -410,14 +376,15 @@ def build_view(user_id: int, view: str, payload: str = "") -> Tuple[str, Optiona
     if view == "help":
         text = (
             "❓ <b>Venox Yordamchi bo'yicha ko'rsatma</b>\n\n"
-            "• <b>🏪 Kutubxona</b> — 100+ tayyor bot shablonlaridan birini tanlab, "
-            "bir necha soniyada bot yaratish.\n"
+            f"• <b>🏪 Kutubxona</b> — {db.template_count()} ta shablon, "
+            f"{len(db.categories())} kategoriya (E-commerce, ChatGPT, SMM, Crypto va boshqalar). "
+            "Inline tugmalar bilan bir soniyada bot yaratish.\n"
             "• <b>🤖 Bot yaratish</b> — o'zingizning botingizni qadam-baqadam qurish.\n"
-            "• <b>📦 Botlarim</b> — yaratgan botlaringizni boshqarish, nashr qilish "
-            "va JSON ko'rinishida yuklab olish.\n"
-            "• <b>💳 Tariflar</b> — Free, Standart va Ultra/Pro rejalari.\n"
-            "• <b>📊 Limitim</b> — cheklovlar va foydalanish statistikasi.\n\n"
-            "Buyruqlar: /start, /menu, /build, /plans, /usage, /admin\n"
+            "• <b>🛠 Buyurtma</b> — noyob botni bizga buyurtma qilish.\n"
+            "• <b>📦 Botlarim</b> — botlarni boshqarish va JSON yuklab olish.\n"
+            "• <b>💳 Tariflar</b> — Free, Standart (60,000 UZS) va Ultra Pro (150,000 UZS).\n"
+            "• <b>📊 Limitim</b> — cheklovlar va statistika.\n\n"
+            "Buyruqlar: /start, /menu, /build, /request, /plans, /usage, /admin\n"
             f"Yordam va to'lov bo'yicha savollar: @{esc(ADMIN_USERNAME)}"
         )
         return text, main_menu_keyboard(user_id)
@@ -583,10 +550,6 @@ async def callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         created = db.create_bot(
             user.id, template["name"], config, template_key=key, source="template"
         )
-        if APP_URL:
-            db.update_bot(
-                created["id"], user.id, mini_app_url=make_bot_url(created["id"], config)
-            )
         await query.answer("Bot yaratildi! ✅")
         await edit_view(query, "bot", str(created["id"]))
         return
@@ -605,15 +568,8 @@ async def callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         if not bot:
             await query.answer("Bot topilmadi.", show_alert=True)
             return
-        if not APP_URL:
-            await query.answer(
-                "Mini App URL sozlanmagan (MINI_APP_URL / RENDER_EXTERNAL_URL).",
-                show_alert=True,
-            )
-            return
-        url = make_bot_url(bot_id, bot["config"])
-        db.update_bot(bot_id, user.id, status="published", mini_app_url=url)
-        await query.answer("Bot nashr qilindi! 🚀")
+        db.update_bot(bot_id, user.id, status="published")
+        await query.answer("Bot tayyor holatga o'tkazildi! 🚀")
         await edit_view(query, "bot", str(bot_id))
         return
 
@@ -922,8 +878,6 @@ async def build_save(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     else:
         bot = db.create_bot(user.id, state["name"], config, source="custom")
         bot_id = bot["id"]
-        if APP_URL:
-            db.update_bot(bot_id, user.id, mini_app_url=make_bot_url(bot_id, config))
         message = f"🤖 Bot #{bot_id} yaratildi!"
     BUILD_STATE.pop(user.id, None)
     context.user_data.pop("build", None)
@@ -1033,84 +987,97 @@ async def admin_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
 
 # --------------------------------------------------------------------------- #
-# Messages: receipts, Web App data, chat
+# Custom development request (inline-only conversation)
 # --------------------------------------------------------------------------- #
-async def web_app_data_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+REQUEST_CANCEL = InlineKeyboardMarkup(
+    [[InlineKeyboardButton("❌ Bekor qilish", callback_data="request_cancel")]]
+)
+
+
+async def request_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user = update.effective_user
     db.ensure_user(user.id, user.username, user.first_name)
-    raw = update.message.web_app_data.data or "{}"
+    REQUEST_STATE[user.id] = {}
+    context.user_data["request"] = True
+    prompt = (
+        "🛠 <b>Maxsus bot buyurtmasi</b>\n\n"
+        f"Jami <b>{db.template_count()}</b> ta shablon mavjud, lekin o'z g'oyangiz bormi? "
+        "1-qadam: loyiha / bot nomini yuboring."
+    )
+    if update.callback_query:
+        await update.callback_query.answer()
+        await edit_message_text_safe(update.callback_query, prompt, REQUEST_CANCEL)
+    else:
+        await update.message.reply_text(prompt, reply_markup=REQUEST_CANCEL, parse_mode=ParseMode.HTML)
+    return R_NAME
+
+
+async def request_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    value = (update.message.text or "").strip()
+    if not 2 <= len(value) <= 60:
+        await update.message.reply_text("Nomi 2-60 belgi bo'lishi kerak. Qayta yuboring:", reply_markup=REQUEST_CANCEL)
+        return R_NAME
+    REQUEST_STATE[update.effective_user.id]["name"] = value
+    await update.message.reply_text(
+        "2-qadam: aloqa uchun @username yoki telefon raqamingizni yuboring.",
+        reply_markup=REQUEST_CANCEL,
+    )
+    return R_CONTACT
+
+
+async def request_contact(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    value = (update.message.text or "").strip()
+    if len(value) < 3:
+        await update.message.reply_text("Aloqa ma'lumotini yuboring:", reply_markup=REQUEST_CANCEL)
+        return R_CONTACT
+    REQUEST_STATE[update.effective_user.id]["contact"] = value
+    await update.message.reply_text(
+        "3-qadam: bot nima qilishi kerakligini batafsil yozing "
+        "(funksiyalar, auditoriya, muddat).",
+        reply_markup=REQUEST_CANCEL,
+    )
+    return R_DESC
+
+
+async def request_desc(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    value = (update.message.text or "").strip()
+    if len(value) < 10:
+        await update.message.reply_text("Bir oz batafsil yozing:", reply_markup=REQUEST_CANCEL)
+        return R_DESC
+    user = update.effective_user
+    state = REQUEST_STATE.pop(user.id, {})
+    context.user_data.pop("request", None)
+    admin_text = (
+        "🛠 <b>Yangi maxsus bot buyurtmasi</b>\n"
+        f"👤 Mijoz: {esc(user.first_name)} (@{esc(user.username or 'yo‘q')}, {user.id})\n"
+        f"📌 Nomi: {esc(state.get('name', '—'))}\n"
+        f"📞 Aloqa: {esc(state.get('contact', '—'))}\n\n"
+        f"📝 Tavsif:\n{esc(value)}"
+    )
     try:
-        payload = json.loads(raw)
-    except ValueError:
-        payload = {"action": "unknown"}
-    action = payload.get("action")
-    if action == "template":
-        key = payload.get("key", "")
-        template = db.get_template(key)
-        if not template:
-            await update.message.reply_text("❌ Shablon topilmadi.")
-            return
-        limits = db.limits(user.id)
-        if template["is_premium"] and not limits["premium_templates"]:
-            await update.message.reply_text("👑 Bu Premium shablon. /plans orqali tarif oling.")
-            return
-        if not check_limit(limits["bots"], db.count_bots(user.id)):
-            await update.message.reply_text("🤖 Botlar limitiga yetdingiz. /plans")
-            return
-        config = dict(template["config"])
-        config["source_template"] = key
-        bot = db.create_bot(user.id, template["name"], config, template_key=key)
-        if APP_URL:
-            db.update_bot(bot["id"], user.id, mini_app_url=make_bot_url(bot["id"], config))
-        text, markup = build_view(user.id, "bot", str(bot["id"]))
-        await update.message.reply_text(text=text, reply_markup=markup, parse_mode=ParseMode.HTML)
-    elif action == "plan":
-        tier = str(payload.get("tier", ""))
-        if tier not in PLANS:
-            await update.message.reply_text("❌ Tarif topilmadi.")
-            return
-        if tier == FREE:
-            await update.message.reply_text(
-                "🆓 Free tarifi bepul. /build orqali botingizni yaratishingiz mumkin.",
-                reply_markup=main_menu_keyboard(user.id),
-            )
-            return
-        text, markup = build_view(user.id, "pay", tier)
-        await update.message.reply_text(text=text, reply_markup=markup, parse_mode=ParseMode.HTML)
-    elif action == "custom_request":
-        name = str(payload.get("name", "")).strip()
-        contact = str(payload.get("contact", "")).strip()
-        kind = str(payload.get("type", "")).strip()
-        deadline = str(payload.get("deadline", "")).strip()
-        description = str(payload.get("description", "")).strip()
-        if not name or not contact or not description:
-            await update.message.reply_text("❌ Buyurtma ma'lumotlari to'liq emas.")
-            return
-        admin_text = (
-            "🛠 <b>Yangi maxsus bot buyurtmasi</b>\n"
-            f"👤 Mijoz: {esc(user.first_name)} (@{esc(user.username or 'yo‘q')}, {user.id})\n"
-            f"📌 Nomi: {esc(name)}\n"
-            f"🔧 Turi: {esc(kind)}\n"
-            f"⏰ Muddat: {esc(deadline)}\n"
-            f"📞 Aloqa: {esc(contact)}\n\n"
-            f"📝 Tavsif:\n{esc(description)}"
+        await context.bot.send_message(
+            chat_id=ADMIN_ID, text=admin_text, parse_mode=ParseMode.HTML
         )
-        try:
-            await context.bot.send_message(
-                chat_id=ADMIN_ID, text=admin_text, parse_mode=ParseMode.HTML
-            )
-        except Exception as exc:
-            log.error("Could not forward custom request to admin: %s", exc)
-        await update.message.reply_text(
-            "✅ Buyurtmangiz adminga yuborildi. Tez orada bog'lanamiz.",
-            reply_markup=main_menu_keyboard(user.id),
-        )
-    elif action == "bot_open":
-        await update.message.reply_text(
-            f"🌐 Mini App orqali bot #{payload.get('id', '?')} ochildi: {esc(payload.get('label', ''))}"
+    except Exception as exc:
+        log.error("Could not forward custom request to admin: %s", exc)
+    await update.message.reply_text(
+        "✅ Buyurtmangiz adminga yuborildi. Tez orada bog'lanamiz.",
+        reply_markup=main_menu_keyboard(user.id),
+    )
+    return ConversationHandler.END
+
+
+async def request_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    REQUEST_STATE.pop(update.effective_user.id, None)
+    context.user_data.pop("request", None)
+    if update.callback_query:
+        await update.callback_query.answer("Bekor qilindi.")
+        await edit_message_text_safe(
+            update.callback_query, "❌ Buyurtma bekor qilindi.", main_menu_keyboard(update.effective_user.id)
         )
     else:
-        await update.message.reply_text("Mini App ma'lumoti qabul qilindi.")
+        await update.message.reply_text("❌ Buyurtma bekor qilindi.", reply_markup=reply_main_keyboard())
+    return ConversationHandler.END
 
 
 async def receipt_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
@@ -1176,7 +1143,7 @@ SIMPLE_REPLIES = {
     "salom": "Assalomu alaykum! Men Venox Yordamchi. /menu orqali bot yaratishingiz mumkin.",
     "hi": "Hello! /menu — barcha imkoniyatlar shu yerda.",
     "rahmat": "Arzimaydi! 😊 Yana biror narsa kerak bo'lsa, /menu.",
-    "bola": "Bot yaratish uchun /build yoki kutubxonadagi 100+ shablondan foydalaning.",
+    "bola": "Bot yaratish uchun /build, kutubxonadagi 192 shablon yoki /request dan foydalaning.",
 }
 
 
@@ -1225,159 +1192,6 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 
 # --------------------------------------------------------------------------- #
-# Web Mini App HTTP server
-# --------------------------------------------------------------------------- #
-INDEX_HTML_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html")
-
-BOT_HTML = """<!doctype html>
-<html lang="uz"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>__NAME__</title><script src="https://telegram.org/js/telegram-web-app.js"></script>
-<style>body{margin:0;font-family:-apple-system,system-ui,sans-serif;background:#0f172a;color:#e2e8f0;padding:20px}h1{font-size:20px}.msg{background:#1e293b;border-radius:14px;padding:14px;margin:16px 0;line-height:1.5}.btn{display:block;width:100%;padding:12px;margin:8px 0;border:0;border-radius:12px;background:#6366f1;color:#fff;font-size:15px;cursor:pointer}.tag{font-size:11px;opacity:.6}</style></head>
-<body><h1>🤖 __NAME__</h1><div class="tag">Venox Yordamchi orqali yaratilgan bot</div><div class="msg">__WELCOME__</div><div id="buttons">__BUTTONS__</div>
-<script>var tg=window.Telegram?Telegram.WebApp:null;if(tg)tg.expand();function press(l){var p=JSON.stringify({action:'bot_open',id:__ID__,label:l});if(tg){tg.sendData(p);tg.close();}else alert(l);}var bs=document.querySelectorAll('.btn');for(var i=0;i<bs.length;i++){(function(b){b.onclick=function(){press(b.getAttribute('data-label'));};})(bs[i]);}</script>
-</body></html>"""
-
-
-class MiniAppHandler(BaseHTTPRequestHandler):
-    """Serves index.html and published bot pages without external dependencies."""
-
-    protocol_version = "HTTP/1.1"
-    db_store: Database = db
-
-    def _render(self) -> Tuple[int, str, str]:
-        path = urlparse(self.path).path.rstrip("/") or "/"
-        if path in {"/", "/index.html"}:
-            data = [
-                {
-                    "key": t["key"],
-                    "name": t["name"],
-                    "icon": t["icon"],
-                    "category_name": t["category_name"],
-                    "description": t["description"],
-                    "premium": t["is_premium"],
-                }
-                for t in self.db_store.templates()
-            ]
-            prices = [
-                {
-                    "key": p["key"],
-                    "label": p["label"],
-                    "emoji": p["emoji"],
-                    "price": p["price"],
-                    "days": p["days"],
-                    "perks": p["perks"],
-                }
-                for p in (PLANS[FREE], PLANS[STANDART], PLANS[ULTRA])
-            ]
-            try:
-                with open(INDEX_HTML_PATH, encoding="utf-8") as handle:
-                    body = handle.read()
-            except OSError as exc:
-                log.error("index.html is missing: %s", exc)
-                body = "<h1>Venox Yordamchi</h1><p>index.html topilmadi.</p>"
-            body = (
-                body.replace("__DATA__", json.dumps(data, ensure_ascii=False).replace("</", "<\\/"))
-                .replace("__PRICES__", json.dumps(prices, ensure_ascii=False).replace("</", "<\\/"))
-                .replace("__CARD__", html.escape(PAYMENT_CARD))
-                .replace("__ADMIN__", html.escape(ADMIN_USERNAME))
-            )
-            return 200, "text/html; charset=utf-8", body
-
-        if path.startswith("/b/"):
-            try:
-                bot_id = int(path.split("/")[2])
-            except (ValueError, IndexError):
-                return 404, "text/plain; charset=utf-8", "Not found"
-            cfg: Optional[Dict[str, Any]] = None
-            name = ""
-            query = parse_qs(urlparse(self.path).query)
-            token = query.get("c", [""])[0]
-            if token:
-                try:
-                    raw = base64.urlsafe_b64decode(token + "=" * (-len(token) % 4))
-                    decoded = json.loads(raw.decode("utf-8"))
-                    if isinstance(decoded, dict):
-                        cfg = decoded
-                        name = str(decoded.get("name", ""))
-                except (ValueError, UnicodeDecodeError) as exc:
-                    log.debug("bad mini app token: %s", exc)
-            if cfg is None:
-                record = self.db_store.get_bot(bot_id)
-                if not record:
-                    return 404, "text/plain; charset=utf-8", "Not found"
-                cfg, name = record["config"], record["name"]
-            buttons = "".join(
-                f'<button class="btn" data-label="{html.escape(str(b), quote=True)}">'
-                f"{html.escape(str(b))}</button>"
-                for b in cfg.get("buttons", [])
-            )
-            body = (
-                BOT_HTML.replace("__NAME__", html.escape(name))
-                .replace("__WELCOME__", html.escape(str(cfg.get("welcome", ""))).replace("\n", "<br>"))
-                .replace("__BUTTONS__", buttons)
-                .replace("__ID__", str(bot_id))
-            )
-            return 200, "text/html; charset=utf-8", body
-
-        if path == "/health":
-            payload = json.dumps({"status": "ok", "templates": self.db_store.template_count()})
-            return 200, "application/json; charset=utf-8", payload
-        return 404, "text/plain; charset=utf-8", "Not found"
-
-    def _respond(self, include_body: bool = True) -> None:
-        try:
-            status, content_type, body = self._render()
-        except Exception:
-            log.exception("Mini App render failed for %s", self.path)
-            status, content_type = 500, "text/plain; charset=utf-8"
-            body = "Internal Server Error"
-        encoded = body.encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", content_type)
-        self.send_header("Content-Length", str(len(encoded)))
-        self.send_header("Cache-Control", "no-store")
-        self.end_headers()
-        if include_body:
-            self.wfile.write(encoded)
-
-    def do_GET(self) -> None:  # noqa: N802
-        self._respond()
-
-    def do_HEAD(self) -> None:  # noqa: N802
-        self._respond(include_body=False)
-
-    def log_message(self, fmt: str, *args: Any) -> None:
-        log.info("webapp %s - %s", self.address_string(), fmt % args)
-
-
-def create_webapp_server() -> ThreadingHTTPServer:
-    port = int(os.getenv("PORT", "8000"))
-    server = ThreadingHTTPServer(("0.0.0.0", port), MiniAppHandler)
-    log.info("Web Mini App listening on 0.0.0.0:%s", port)
-    return server
-
-
-def start_webapp() -> ThreadingHTTPServer:
-    """Start the HTTP server in a daemon thread alongside the Telegram bot."""
-    server = create_webapp_server()
-    threading.Thread(
-        target=server.serve_forever, name="venox-miniapp", daemon=True
-    ).start()
-    return server
-
-
-def run_webapp() -> None:
-    """HTTP-only mode: serve in the main thread so Render sees a live port."""
-    server = create_webapp_server()
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        server.server_close()
-
-
-# --------------------------------------------------------------------------- #
 # Application setup
 # --------------------------------------------------------------------------- #
 async def post_init(application: Application) -> None:
@@ -1386,6 +1200,7 @@ async def post_init(application: Application) -> None:
             BotCommand("start", "Botni ishga tushirish"),
             BotCommand("menu", "Asosiy menyu"),
             BotCommand("build", "Custom bot yaratish"),
+            BotCommand("request", "Maxsus bot buyurtmasi"),
             BotCommand("plans", "Tariflar va narxlar"),
             BotCommand("usage", "Mening limitim"),
             BotCommand("admin", "Admin panel"),
@@ -1400,6 +1215,23 @@ async def post_init(application: Application) -> None:
 
 def build_application() -> Application:
     application = ApplicationBuilder().token(BOT_TOKEN).post_init(post_init).build()
+
+    request_conv = ConversationHandler(
+        entry_points=[
+            CommandHandler("request", request_start),
+            CallbackQueryHandler(request_start, pattern="^request$"),
+        ],
+        states={
+            R_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, request_name)],
+            R_CONTACT: [MessageHandler(filters.TEXT & ~filters.COMMAND, request_contact)],
+            R_DESC: [MessageHandler(filters.TEXT & ~filters.COMMAND, request_desc)],
+        },
+        fallbacks=[
+            CommandHandler("cancel", request_cancel),
+            CallbackQueryHandler(request_cancel, pattern="^request_cancel$"),
+        ],
+        per_message=False,
+    )
 
     builder_conv = ConversationHandler(
         entry_points=[
@@ -1435,6 +1267,7 @@ def build_application() -> Application:
         per_message=False,
     )
 
+    application.add_handler(request_conv)
     application.add_handler(builder_conv)
     application.add_handler(admin_conv)
     application.add_handler(CommandHandler("start", start))
@@ -1443,20 +1276,14 @@ def build_application() -> Application:
     application.add_handler(CommandHandler("plans", plans_command))
     application.add_handler(CommandHandler("usage", usage_command))
     application.add_handler(CommandHandler("admin", admin_command))
-    application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data_handler))
     application.add_handler(CallbackQueryHandler(callback_router))
-    application.add_handler(MessageHandler(filters.ALL & ~filters.StatusUpdate.WEB_APP_DATA, text_handler))
+    application.add_handler(MessageHandler(filters.ALL, text_handler))
     return application
 
 
 def main() -> None:
-    # The dashboard does not need a Telegram token; check it only for bot mode.
-    if "--webapp" in sys.argv[1:]:
-        run_webapp()
-        return
     if not BOT_TOKEN:
         raise RuntimeError("BOT_TOKEN is not configured.")
-    start_webapp()
     application = build_application()
     application.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
 
