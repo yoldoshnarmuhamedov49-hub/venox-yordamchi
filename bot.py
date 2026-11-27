@@ -16,6 +16,8 @@ import logging
 import os
 import random
 import re
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from io import BytesIO
 from typing import Any, Dict, Optional, Tuple
 
@@ -1401,6 +1403,31 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 
 # --------------------------------------------------------------------------- #
+# Render health check (keeps the web_service Live while long polling runs)
+# --------------------------------------------------------------------------- #
+class _HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self) -> None:
+        body = b"ok"
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, fmt: str, *args: Any) -> None:
+        log.debug("health check %s %s", self.address_string(), fmt % args)
+
+
+def start_health_server() -> None:
+    port = int(os.environ.get("PORT", "10000"))
+    server = ThreadingHTTPServer(("0.0.0.0", port), _HealthHandler)
+    threading.Thread(
+        target=server.serve_forever, name="health-server", daemon=True
+    ).start()
+    log.info("Health server listening on 0.0.0.0:%s", port)
+
+
+# --------------------------------------------------------------------------- #
 # Application setup
 # --------------------------------------------------------------------------- #
 async def post_init(application: Application) -> None:
@@ -1464,6 +1491,7 @@ def build_application() -> Application:
 def main() -> None:
     if not BOT_TOKEN:
         raise RuntimeError("BOT_TOKEN is not configured.")
+    start_health_server()
     application = build_application()
     application.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
 

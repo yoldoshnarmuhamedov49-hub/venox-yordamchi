@@ -484,6 +484,8 @@ class Database:
 
     def effective_tier(self, user_id: int) -> str:
         """Resolve the active plan, honouring VIP expiry."""
+        if user_id == ADMIN_ID:
+            return ULTRA
         user = self.get_user(user_id)
         if not user:
             return FREE
