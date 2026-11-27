@@ -1,0 +1,28 @@
+# Render deployment for Venox Yordamchi
+# Create a new Background Worker from this file, or import this blueprint.
+services:
+  - type: worker
+    name: venox-yordamchi
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python bot.py"
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: ADMIN_ID
+        sync: false
+      - key: PAYMENT_CARD
+        sync: false
+      - key: MESSAGE_LIMIT
+        value: "25"
+      - key: DATABASE_PATH
+        value: "venox.db"
+      - key: TZ
+        value: "Asia/Tashkent"
+      - key: LOG_LEVEL
+        value: "INFO"
+      # Optional: enable real AI replies instead of the built-in witty responder
+      - key: OPENAI_API_KEY
+        sync: false
