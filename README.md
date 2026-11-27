@@ -1,19 +1,19 @@
 # Venox Yordamchi — Telegram Bot Constructor + GitHub Pages Mini App
 
-A lightning-fast long-polling Telegram bot with rich inline keyboards, plus an
-optional static dashboard served instantly by GitHub Pages (no Render sleep
-screens). The bot hosts no HTTP server.
+A lightning-fast long-polling Telegram bot with a persistent bottom menu and a
+dedicated AI Bot Advisor chat, plus a static GitHub Pages Mini App where bots
+are actually designed and built. The bot hosts no HTTP server.
 
 ## Features
 
 - **192 templates in 16 categories** — E-commerce, Ta'lim, Kontent, AI & Utility, ChatGPT & AI, SMM, Crypto, Avtomobil, Turizm, Sug'urta, Ko'chmas mulk, O'yin, Biznes, Sog'liq, Xizmatlar, Foydali vositalar.
-- **Custom bot builder** — step-by-step creation with name, welcome text, buttons and auto-reply; JSON export and bot management.
-- **Custom bot request** — `/request` collects a project brief and forwards it to the admin.
+- **AI Bot Yasash (Mini App)** — describe the bot or pick one of 192 templates; the dashboard generates structure, commands, setup steps and monetization entirely inside the app (no WebApp.sendData).
+- **AI Maslahatchi (chat)** — any text message gets practical Uzbek advice on bot design, structure and monetization; the bot never auto-builds or messages "Bot #1 yaratildi".
 - **Tiers** — Free (0 UZS), Standart (**60,000 UZS** / 30 days), Ultra Pro (150,000 UZS / 90 days).
 - **Payments** — card `5614 6830 1549 1525`; the user sends a receipt screenshot, the admin approves/rejects it and the tier activates automatically.
 - **Admin** — ID `8527026238` (@THE_VENOX) has permanent Ultra Pro/VIP with unlimited access, plus receipt review, broadcast and VIP grants.
-- **Instant** — pure long polling; no bot HTTP server, no Render cold-start spinner. The **🚀 Ochish (Mini App)** button opens the static dashboard from GitHub Pages: `https://yoldoshnarmuhamedov49-hub.github.io/venox-yordamchi/`.
-- **Mini App orders** — template picks, plan selections and custom requests are sent back to the bot with `Telegram.WebApp.sendData()` and handled in `web_app_data_handler`.
+- **Persistent bottom keyboard** — 🚀 Bot yasash (Mini App), 🤖 AI Maslahatchi, 💎 Tariflar, 💳 To'lov / Chek yuborish.
+- **Instant** — pure long polling; no bot HTTP server, no Render cold-start spinner. `https://yoldoshnarmuhamedov49-hub.github.io/venox-yordamchi/`.
 
 ## Local run
 

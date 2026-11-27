@@ -93,6 +93,13 @@
   .ok-msg{display:none;padding:12px;border-radius:12px;background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok);font-size:12px;font-weight:600}
   .ok-msg.on{display:block}
   footer{text-align:center;color:var(--muted);font-size:10px;margin-top:28px;padding-top:16px;border-top:1px solid var(--border)}
+  .build-result{display:none;margin-top:18px;border-top:1px dashed var(--border);padding-top:16px}
+  .build-result.on{display:block}
+  .build-result h3{margin:0 0 8px;font-size:17px}
+  .build-block{background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:12px;margin:10px 0}
+  .build-block b{display:block;font-size:12px;margin-bottom:6px;color:var(--accent2)}
+  .build-block code,.build-block div.step{display:block;font-size:11px;color:var(--text);background:var(--bg);border-radius:8px;padding:6px 9px;margin:5px 0;word-break:break-word;line-height:1.5}
+  .build-tip{font-size:11px;color:var(--muted);margin-top:10px}
   .overlay{position:fixed;inset:0;z-index:50;background:rgba(2,6,23,.72);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:18px}
   .overlay.on{display:flex}
   .modal{width:100%;max-width:440px;max-height:86vh;overflow-y:auto;background:var(--card);border:1px solid var(--border);border-radius:22px;padding:20px;box-shadow:var(--shadow);animation:fade .2s ease}
@@ -129,10 +136,38 @@
 
   <nav>
     <div class="tab on" data-tab="templates">🧩 Shablonlar</div>
+    <div class="tab" data-tab="aibuilder">🤖 AI Bot Yasash</div>
     <div class="tab" data-tab="pricing">💎 Tariflar</div>
     <div class="tab" data-tab="payment">💳 To'lov</div>
     <div class="tab" data-tab="custom">🛠 Buyurtma</div>
   </nav>
+
+  <section id="aibuilder">
+    <div class="sec-head"><h2>🤖 AI Bot Yasash</h2><small>g'oyangizni yozing yoki shablon tanlang — tuzilma shu yerda tayyor bo'ladi</small></div>
+    <div class="panel">
+      <form id="builderForm">
+        <div class="fields">
+          <div>
+            <label for="bTemplate">Shablon (ixtiyoriy)</label>
+            <select id="bTemplate"><option value="">— Shablonsiz, o'z g'oyam —</option></select>
+          </div>
+          <div>
+            <label for="bName">Bot nomi</label>
+            <input id="bName" maxlength="60" placeholder="Masalan: Do'kon yordamchisi">
+          </div>
+        </div>
+        <div>
+          <label for="bIdea">Bot nima qilishi kerak? *</label>
+          <textarea id="bIdea" maxlength="1500" placeholder="Kimga xizmat qiladi, qanday vazifa bajaradi, qayerda ishlatiladi…" required></textarea>
+        </div>
+        <div class="row">
+          <button class="btn" type="submit">✨ Bot tuzilmasini yaratish</button>
+          <button class="btn alt" id="bClear" type="button">🧹 Tozalash</button>
+        </div>
+      </form>
+      <div id="builderResult"></div>
+    </div>
+  </section>
 
   <section id="templates" class="on">
     <div class="sec-head"><h2>🏪 Botlar kutubxonasi</h2><small>shablonni tanlang — bot avtomatik yaratiladi</small></div>
@@ -150,7 +185,7 @@
   <section id="payment">
     <div class="sec-head"><h2>💳 To'lov va chek</h2><small>to'lov qiling, chekni yuboring — tarif avtomatik ochiladi</small></div>
     <div class="panel">
-      <div class="cardbox"><div class="num" id="cardNumber"></div><button class="copy" id="copyCard" type="button">📋 Nusxalash</button></div>
+      <div class="cardbox"><div class="num" id="cardNumber">5614 6830 1549 1525</div><button class="copy" id="copyCard" type="button">📋 Nusxalash</button></div>
       <ol class="steps">
         <li><b>Kartaga to'lov qiling</b>Karta raqamini nusxalab, kerakli summani o'tkazing.</li>
         <li><b>Tarifni tanlang</b>Pasdagi tugmalardan Standart yoki Ultra Pro ni tanlang.</li>
@@ -336,7 +371,77 @@
     showRequest(payload); document.getElementById('okMsg').classList.add('on'); this.reset();
   });
 
-  renderChips(); renderTemplates(); renderPlans();
+  function initBuilder(){
+    var sel=document.getElementById('bTemplate');
+    var options='<option value="">— Shablonsiz, o\'z g\'oyam —</option>';
+    DATA.forEach(function(x){ options+='<option value="'+x.key+'">'+esc(x.icon+' '+x.name+' • '+x.category_name)+'</option>'; });
+    sel.innerHTML=options;
+    sel.onchange=function(){
+      var t=DATA.filter(function(x){return x.key===sel.value;})[0];
+      if(t){ document.getElementById('bName').value=t.name; document.getElementById('bIdea').value=t.description; }
+    };
+    document.getElementById('bClear').onclick=function(){
+      document.getElementById('builderForm').reset();
+      var result=document.getElementById('builderResult');
+      result.classList.remove('on'); result.innerHTML='';
+    };
+    document.getElementById('builderForm').addEventListener('submit',function(e){
+      e.preventDefault();
+      var t=DATA.filter(function(x){return x.key===sel.value;})[0];
+      var idea=document.getElementById('bIdea').value.trim();
+      var name=document.getElementById('bName').value.trim()||(t?t.name:'Mening botim');
+      if(!idea && t) idea=t.description;
+      if(!idea) return;
+      var low=idea.toLowerCase();
+      var modules=[];
+      if(/savat|buyurtma|katalog|mahsulot|do'kon|sotuv/.test(low)) modules.push('Katalog → Savatcha → Buyurtma → To\'lov');
+      if(/bron|uchrashuv|qabul|vaqt|restoran/.test(low)) modules.push('Sana/vaqt tanlash → Tasdiqlash → Eslatma');
+      if(/faq|ma'lumot|savol|javob|yordam/.test(low)) modules.push('FAQ / Savol-javob bazasi');
+      if(/ai|gpt|tahlil|matn|tarjima/.test(low)) modules.push('AI so\'rov → Natija → Tahrirlash');
+      if(/kripto|crypto|narx|portfel/.test(low)) modules.push('Narx/portfel → Ogohlantirish → Hisobot');
+      if(!modules.length) modules=['Xush kelibsiz → Menyu → Ma\'lumot','Aloqa / Yordam'];
+      var commands=[
+        '/start — tanishtirish va asosiy tugmalar',
+        '/menu — doimiy menyu',
+        '/help — foydalanish tartibi',
+        '/order — asosiy harakat (buyurtma/bron/so\'rov)'
+      ];
+      if(/admin|hisobot|statistika/.test(low)) commands.push('/admin — buyurtmalar va statistika');
+      var buttons=['Boshlash','Katalog / Ma\'lumot','Buyurtma / Bron','Aloqa'];
+      var steps=[
+        '1. BotFather orqali yangi bot yaratib, token oling.',
+        '2. Venox Yordamchi Standart yoki Ultra Pro tarifini tanlang.',
+        '3. Shu tuzilmani nusxalab, ishlab chiquvchiga yuboring.',
+        '4. /start, /menu, /help va asosiy harakat komandalarini sinang.',
+        '5. 5-10 haqiqiy foydalanuvchi bilan test qilib, menyuni qisqartiring.'
+      ];
+      var money='Obuna (Standart 60,000 UZS / Ultra Pro 150,000 UZS), buyurtma komissiyasi yoki premium funksiya (AI tahlil, hisobot).';
+      var plain='🤖 '+name+'\n\nMAQSAD: '+idea+'\n\nOQIM:\n- '+modules.join('\n- ')+
+        '\n\nKOMANDALAR:\n- '+commands.join('\n- ')+
+        '\n\nTUGMALAR: '+buttons.join(' | ')+
+        '\n\nSOZLASH:\n- '+steps.join('\n- ')+
+        '\n\nMONETIZATSIYA: '+money;
+      var block=function(title,items){ return '<div class="build-block"><b>'+title+'</b>'+items.map(function(x){return '<div class="step">'+esc(x)+'</div>';}).join('')+'</div>'; };
+      var result=document.getElementById('builderResult');
+      result.innerHTML='<div class="build-result on">'+
+        '<h3>✨ '+esc(name)+' — tayyor bot tuzilmasi</h3>'+
+        '<p class="build-tip">Mini App yopilmaydi. Tuzilmani nusxalab, keyinroq foydalaning.</p>'+
+        block('🎯 Foydalanuvchi oqimi',modules)+
+        block('⌨️ Komandalar',commands)+
+        block('🔘 Menyu tugmalari',buttons)+
+        block('🛠 Sozlash bosqichlari',steps)+
+        block('💰 Monetizatsiya',[money])+
+        '<div class="row"><button class="btn" type="button" data-copy="'+esc(plain)+'" id="copyBlueprint">📋 Butun tuzilmani nusxalash</button>'+
+        '<button class="btn alt" type="button" data-copy="'+esc(commands.join('\n'))+'" id="copyCommands">⌨️ Komandalarni nusxalash</button></div>'+
+        '</div>';
+      haptic();
+      document.getElementById('copyBlueprint').onclick=function(){ copied(this,'✅ Tuzilma nusxalandi.'); };
+      document.getElementById('copyCommands').onclick=function(){ copied(this,'✅ Komandalar nusxalandi.'); };
+      result.scrollIntoView({behavior:'smooth',block:'start'});
+    });
+  }
+
+  renderChips(); renderTemplates(); renderPlans(); initBuilder();
 </script>
 </body>
 </html>

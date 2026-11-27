@@ -25,6 +25,7 @@ from telegram import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     InputFile,
+    KeyboardButton,
     ReplyKeyboardMarkup,
     Update,
     WebAppInfo,
@@ -97,47 +98,29 @@ def check_limit(value: Optional[int], used: int) -> bool:
 # Keyboards
 # --------------------------------------------------------------------------- #
 def reply_main_keyboard() -> ReplyKeyboardMarkup:
+    """Persistent bottom menu — the only chat navigation."""
     return ReplyKeyboardMarkup(
         [
-            ["🏪 Kutubxona", "🤖 Bot yasash"],
-            ["💳 Tariflar", "📊 Limitim"],
-            ["📦 Botlarim", "❓ Yordam"],
+            [
+                KeyboardButton(
+                    "🚀 Bot yasash (Mini App)",
+                    web_app=WebAppInfo(url=GITHUB_PAGES_URL),
+                )
+            ],
+            [
+                KeyboardButton("🤖 AI Maslahatchi"),
+                KeyboardButton("💎 Tariflar"),
+            ],
+            [KeyboardButton("💳 To'lov / Chek yuborish")],
         ],
         resize_keyboard=True,
+        is_persistent=True,
     )
 
 
-def main_menu_keyboard(user_id: int) -> InlineKeyboardMarkup:
-    rows = [
-        [
-            InlineKeyboardButton(
-                "🚀 Ochish (Mini App)", web_app=WebAppInfo(url=GITHUB_PAGES_URL)
-            )
-        ],
-        [
-            InlineKeyboardButton("🧠 AI Maslahatchi", callback_data="ai_chat"),
-            InlineKeyboardButton("💳 Tariflar", callback_data="plans"),
-        ],
-        [
-            InlineKeyboardButton("🧾 Chek yuborish", callback_data="check_start"),
-            InlineKeyboardButton("📊 Limitim", callback_data="usage"),
-        ],
-        [
-            InlineKeyboardButton(
-                f"🏪 Kutubxona ({db.template_count()})", callback_data="catalog"
-            ),
-            InlineKeyboardButton("🤖 Bot yaratish", callback_data="build"),
-        ],
-        [
-            InlineKeyboardButton("📦 Mening botlarim", callback_data="mybots"),
-            InlineKeyboardButton("🛠 Buyurtma", callback_data="request"),
-        ],
-        [InlineKeyboardButton("❓ Yordam", callback_data="help")],
-    ]
-    if db.is_admin(user_id):
-        rows.append([InlineKeyboardButton("⚙️ Admin panel", callback_data="admin")])
-    rows.append([InlineKeyboardButton("❌ Menyuni yopish", callback_data="close")])
-    return InlineKeyboardMarkup(rows)
+def main_menu_keyboard(user_id: int) -> None:
+    """Inline template menus are intentionally removed from chat."""
+    return None
 
 
 def review_keyboard(payment_id: int) -> InlineKeyboardMarkup:
@@ -247,12 +230,10 @@ def build_view(user_id: int, view: str, payload: str = "") -> Tuple[str, Optiona
             f"💎 Turi: {price}\n"
             f"🔑 Kod: <code>{esc(item['key'])}</code>\n\n"
             f"{esc(item['description'])}\n\n"
-            "Shablondan bot yaratish uchun tugmani bosing — u sizning "
-            "botlar ro'yxatingizga qo'shiladi."
+            "Mini App ichida ushbu shablon asosida bot tuzilmasini yarating."
         )
         markup = InlineKeyboardMarkup(
             [
-                [InlineKeyboardButton("➕ Shablon asosida bot yaratish", callback_data=f"create:{key}")],
                 [InlineKeyboardButton("◀️ Kategoriyaga", callback_data=f"cat:{item['category']}")],
                 [InlineKeyboardButton("🏠 Asosiy menyu", callback_data="menu")],
             ]
@@ -479,11 +460,22 @@ async def edit_view(query: CallbackQuery, view: str, payload: str = "") -> None:
 # --------------------------------------------------------------------------- #
 # Command handlers
 # --------------------------------------------------------------------------- #
+WELCOME_TEXT = (
+    "Assalomu alaykum! 👋 Men <b>Venox Yordamchi</b> — sizning <b>AI Bot Maslahatchi</b>ingiz.\n\n"
+    "Bot g'oyangizni qanday loyihalash, tuzilmasini qurish, foydalanuvchi oqimini "
+    "sozlash va undan pul ishlash bo'yicha amaliy maslahat beraman.\n\n"
+    "Tayyor botlarni esa pastdagi <b>🚀 Bot yasash (Mini App)</b> tugmasi orqali "
+    "Mini App ichida yarating.\n\n"
+    "Savol yozing yoki pastdagi tugmalardan foydalaning."
+)
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     db.ensure_user(user.id, user.username, user.first_name)
-    text, markup = build_view(user.id, "menu")
-    await update.message.reply_text(text, reply_markup=markup, parse_mode=ParseMode.HTML)
+    await update.message.reply_text(
+        WELCOME_TEXT, reply_markup=reply_main_keyboard(), parse_mode=ParseMode.HTML
+    )
 
 
 async def ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -491,9 +483,10 @@ async def ai_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     db.ensure_user(user.id, user.username, user.first_name)
     await update.message.reply_text(
         "🧠 <b>AI Maslahatchi</b>\n\n"
-        "Botlar, biznes va marketing bo'yicha savol yozing — albatta javob beraman. "
-        "Men faqat maslahat beraman, botlarni avtomatik qurmayman.",
-        reply_markup=main_menu_keyboard(user.id),
+        "Botingiz nima qilishi kerakligini yozing: kimga mo'ljallangan, qanday "
+        "vazifa bajaradi, qayerda ishlatiladi. Men tuzilma, komandalar va "
+        "monetizatsiya bo'yicha bosqichma-bosqich maslahat beraman.",
+        reply_markup=reply_main_keyboard(),
         parse_mode=ParseMode.HTML,
     )
 
@@ -505,30 +498,48 @@ async def check_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     context.user_data["awaiting_receipt"] = True
     context.user_data.pop("await_receipt", None)
     await update.message.reply_text(
-        "🧾 <b>Chek yuborish</b>\n\n"
+        "🧾 <b>To'lov / Chek yuborish</b>\n\n"
         f"Karta: <code>{esc(PAYMENT_CARD)}</code>\n\n"
-        "To'lov qilgach, chek rasmini shu chatga yuboring — "
-        f"admin @{esc(ADMIN_USERNAME)} ga yuboriladi.",
-        reply_markup=main_menu_keyboard(user.id),
+        "To'lov qilgach, chek rasmini shu chatga yuboring — u admin "
+        f"@{esc(ADMIN_USERNAME)} ga Tasdiqlash / Rad etish tugmalari bilan yuboriladi.",
+        reply_markup=reply_main_keyboard(),
         parse_mode=ParseMode.HTML,
     )
 
 
 async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    db.ensure_user(update.effective_user.id, update.effective_user.username, update.effective_user.first_name)
-    await send_view(update, context, "menu")
+    user = update.effective_user
+    db.ensure_user(user.id, user.username, user.first_name)
+    await update.message.reply_text(
+        WELCOME_TEXT, reply_markup=reply_main_keyboard(), parse_mode=ParseMode.HTML
+    )
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await send_view(update, context, "help")
+    await update.message.reply_text(
+        "❓ <b>Qanday ishlaydi?</b>\n\n"
+        "• 🚀 Mini App — 192 ta shablon va AI Bot Yasash quruvchisi shu yerda.\n"
+        "• 🤖 AI Maslahatchi — istalgan matn yozing, botingizni loyihalash, "
+        "tuzilma va monetizatsiya bo'yicha maslahat oling.\n"
+        "• 💎 Tariflar — Free, Standart (60,000 UZS) va Ultra Pro (150,000 UZS).\n"
+        "• 💳 Chek yuborish — to'lov rasmini yuboring, admin tasdiqlaydi.",
+        reply_markup=reply_main_keyboard(),
+        parse_mode=ParseMode.HTML,
+    )
 
 
 async def plans_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await send_view(update, context, "plans")
+    text, _ = build_view(update.effective_user.id, "plans")
+    await update.message.reply_text(
+        text, reply_markup=reply_main_keyboard(), parse_mode=ParseMode.HTML
+    )
 
 
 async def usage_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await send_view(update, context, "usage")
+    text, _ = build_view(update.effective_user.id, "usage")
+    await update.message.reply_text(
+        text, reply_markup=reply_main_keyboard(), parse_mode=ParseMode.HTML
+    )
 
 
 async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -571,31 +582,6 @@ async def callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     if data.startswith("tpl:"):
         await edit_view(query, "tpl", data.split(":", 1)[1])
-        return
-
-    if data.startswith("create:"):
-        key = data.split(":", 1)[1]
-        template = db.get_template(key)
-        if not template:
-            await query.answer("Shablon topilmadi.", show_alert=True)
-            return
-        limits = db.limits(user.id)
-        if template["is_premium"] and not limits["premium_templates"]:
-            await query.answer(
-                "Bu Premium shablon. Standart yoki Ultra tarifiga o'ting: /plans",
-                show_alert=True,
-            )
-            return
-        if not check_limit(limits["bots"], db.count_bots(user.id)):
-            await query.answer("Botlar soni limitiga yetdingiz. /plans", show_alert=True)
-            return
-        config = dict(template["config"])
-        config["source_template"] = key
-        created = db.create_bot(
-            user.id, template["name"], config, template_key=key, source="template"
-        )
-        await query.answer("Bot yaratildi! ✅")
-        await edit_view(query, "bot", str(created["id"]))
         return
 
     if data == "mybots":
@@ -645,7 +631,7 @@ async def callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 ]
             ]
         )
-        await edit_message_text_safe(query, f"🗑 Bot #{bot_id} ni o'chirishni tasdiqlaysizmi?", markup)
+        await edit_message_text_safe(query, "🗑 Botni o'chirishni tasdiqlaysizmi?", markup)
         return
 
     if data.startswith("delete:"):
@@ -787,22 +773,6 @@ async def callback_router(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             InlineKeyboardMarkup([[InlineKeyboardButton("◀️ Cheklar", callback_data="admin_pending")]]),
         )
         return
-
-    if data == "build":
-        if not db.limits(user.id)["custom_builder"]:
-            await query.answer("Custom quruvchi Standart/Ultra tarifida mavjud: /plans", show_alert=True)
-            return
-        if not check_limit(db.limits(user.id)["bots"], db.count_bots(user.id)):
-            await query.answer("Botlar soni limitiga yetdingiz. /plans", show_alert=True)
-            return
-        BUILD_STATE[user.id] = {}
-        context.user_data["build"] = {"stage": "name"}
-        await edit_message_text_safe(
-            query,
-            "🤖 <b>Custom bot quruvchi</b>\n\n1-qadam: botingiz nomini yuboring.",
-            InlineKeyboardMarkup([[InlineKeyboardButton("❌ Bekor qilish", callback_data="build_cancel")]]),
-        )
-        return B_NAME
 
     await query.answer("Noma'lum buyruq.", show_alert=True)
 
@@ -946,11 +916,11 @@ async def build_save(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if state.get("edit_id"):
         bot_id = state["edit_id"]
         db.update_bot(bot_id, user.id, name=state["name"], config=config)
-        message = f"✏️ Bot #{bot_id} yangilandi."
+        message = "✏️ Bot yangilandi."
     else:
         bot = db.create_bot(user.id, state["name"], config, source="custom")
         bot_id = bot["id"]
-        message = f"🤖 Bot #{bot_id} yaratildi!"
+        message = "🤖 Bot tayyor."
     BUILD_STATE.pop(user.id, None)
     context.user_data.pop("build", None)
     await edit_view(query, "bot", str(bot_id))
@@ -1152,92 +1122,6 @@ async def request_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     return ConversationHandler.END
 
 
-# --------------------------------------------------------------------------- #
-# GitHub Pages Web Mini App orders
-# --------------------------------------------------------------------------- #
-async def web_app_data_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Process orders submitted through the static GitHub Pages dashboard."""
-    user = update.effective_user
-    db.ensure_user(user.id, user.username, user.first_name)
-    try:
-        payload = json.loads(update.message.web_app_data.data or "{}")
-    except ValueError:
-        payload = {}
-    action = payload.get("action")
-
-    if action == "template":
-        key = str(payload.get("key", ""))
-        template = db.get_template(key)
-        if not template:
-            await update.message.reply_text("❌ Shablon topilmadi.")
-            return
-        limits = db.limits(user.id)
-        if template["is_premium"] and not limits["premium_templates"]:
-            await update.message.reply_text(
-                "👑 Bu Premium shablon. Standart yoki Ultra Pro uchun /plans",
-                reply_markup=main_menu_keyboard(user.id),
-            )
-            return
-        if not check_limit(limits["bots"], db.count_bots(user.id)):
-            await update.message.reply_text("🤖 Botlar limitiga yetdingiz. /plans")
-            return
-        config = dict(template["config"])
-        config["source_template"] = key
-        created = db.create_bot(
-            user.id, template["name"], config, template_key=key, source="template"
-        )
-        text, markup = build_view(user.id, "bot", str(created["id"]))
-        await update.message.reply_text(text=text, reply_markup=markup, parse_mode=ParseMode.HTML)
-        return
-
-    if action == "plan":
-        tier = str(payload.get("tier", ""))
-        if tier not in PLANS:
-            await update.message.reply_text("❌ Tarif topilmadi.")
-            return
-        if tier == FREE:
-            await update.message.reply_text(
-                "🆓 Free bepul. /build bilan bot yaratishingiz mumkin.",
-                reply_markup=main_menu_keyboard(user.id),
-            )
-            return
-        text, markup = build_view(user.id, "pay", tier)
-        await update.message.reply_text(text=text, reply_markup=markup, parse_mode=ParseMode.HTML)
-        return
-
-    if action == "custom_request":
-        name = str(payload.get("name", "")).strip()
-        contact = str(payload.get("contact", "")).strip()
-        description = str(payload.get("description", "")).strip()
-        kind = str(payload.get("type", "")).strip() or "Custom"
-        deadline = str(payload.get("deadline", "")).strip() or "Muhokama qilamiz"
-        if not name or not contact or not description:
-            await update.message.reply_text("❌ Buyurtma ma'lumotlari to'liq emas.")
-            return
-        admin_text = (
-            "🛠 <b>Yangi bot buyurtmasi (Mini App)</b>\n"
-            f"👤 Mijoz: {esc(user.first_name)} (@{esc(user.username or 'yo‘q')}, {user.id})\n"
-            f"📌 Nomi: {esc(name)}\n"
-            f"🔧 Turi: {esc(kind)}\n"
-            f"⏰ Muddat: {esc(deadline)}\n"
-            f"📞 Aloqa: {esc(contact)}\n\n"
-            f"📝 Tavsif:\n{esc(description)}"
-        )
-        try:
-            await context.bot.send_message(
-                chat_id=ADMIN_ID, text=admin_text, parse_mode=ParseMode.HTML
-            )
-        except Exception as exc:
-            log.error("Could not forward Mini App order: %s", exc)
-        await update.message.reply_text(
-            "✅ Buyurtmangiz adminga yuborildi. Tez orada bog'lanamiz.",
-            reply_markup=main_menu_keyboard(user.id),
-        )
-        return
-
-    await update.message.reply_text("Mini App ma'lumoti qabul qilindi.")
-
-
 async def receipt_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     """Handle a receipt when the user is in the payment flow. Returns handled flag."""
     payment_id = context.user_data.get("await_receipt")
@@ -1300,75 +1184,133 @@ async def receipt_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 AI_RULES = [
     (
         ("salom", "assalom", "hi ", "hello", "привет"),
-        "Assalomu alaykum! 👋 Men Venox Yordamchi — AI Maslahatchi. "
-        "Botlar, biznes va marketing bo'yicha savollaringizga javob beraman. "
-        "Nima haqida maslahat kerak?",
+        "Assalomu alaykum! 👋 Men sizning AI Bot Maslahatchiingiz. "
+        "Bot g'oyasini tuzilma, komandalar va monetizatsiya nuqtai nazaridan "
+        "qanday rivojlantirishni bosqichma-bosqich tushuntirib beraman. "
+        "G'oyangizni yozib bering.",
     ),
     (
         ("rahmat", "thanks", "спасибо"),
-        "Arzimaydi! 😊 Yana savol bo'lsa, bemalol yozing — men har doim javob beraman.",
+        "Arzimaydi! 😊 Keyingi qadamni ham birgalikda rejalashtiramiz — "
+        "botingiz uchun maqsadli harakatni yozing, men unga mos tuzilma taklif qilaman.",
     ),
     (
-        ("narx", "price", "tarif", "qancha", "стоим", "sklad", "standart", "ultra", "pro"),
-        "💳 Tariflarimiz: Free — bepul; Standart — 60,000 UZS (30 kun, 10 tagacha bot, "
-        "192 shablon, custom quruvchi); Ultra Pro — 150,000 UZS (90 kun, cheksiz bot va "
-        "barcha imkoniyatlar). To'lov kartasi: 5614 6830 1549 1525. "
-        "Chekni yuborsangiz, admin tasdiqlaydi.",
+        ("narx", "price", "tarif", "qancha", "стоим", "standart", "ultra", "pro"),
+        "💳 Tariflar: Free — bepul; Standart — 60,000 UZS / 30 kun (10 bot, 192 shablon, "
+        "AI quruvchi); Ultra Pro — 150,000 UZS / 90 kun (cheksiz bot, ustuvor yordam). "
+        "Monetizatsiya bo'yicha maslahat: avval bitta bot bilan real mijoz oqimini sinang, "
+        "so'ng tarifni shunga qarab tanlang. Karta: 5614 6830 1549 1525.",
     ),
     (
         ("chek", "to'lov", "tolov", "karta", "оплат", "receipt", "inkasso"),
-        "🧾 To'lov uchun karta: 5614 6830 1549 1525. To'lov qilgach, chek rasmini shu "
-        "chatga yuboring — u admin @THE_VENOX ga Tasdiqlash / Rad etish tugmalari bilan "
-        "yuboriladi. Tarifingiz tasdiqlangach avtomatik ochiladi.",
+        "🧾 Karta: 5614 6830 1549 1525. To'lov qilgach, chek rasmini shu chatga yuboring — "
+        "u admin @THE_VENOX ga Tasdiqlash / Rad etish tugmalari bilan yuboriladi. "
+        "Tasdiqlangach tarif avtomatik ochiladi.",
     ),
     (
-        ("shablon", "template", "katalog", "bot turi", "qanday bot", "what bot"),
-        f"🏪 Katalogda {db.template_count()} ta shablon va {len(db.categories())} kategoriya bor: "
-        "E-commerce, ChatGPT & AI, SMM, Crypto, Ta'lim, Turizm va boshqalar. "
-        "Mini App ichidan shablonni tanlab, kodini nusxalab yuborsangiz, men u haqda "
-        "batafsil maslahat beraman. /menu orqali ham ko'rishingiz mumkin.",
+        ("__shablon__",), "__special_shablon__"
     ),
     (
-        ("biznes", "business", "sotuv", "mijoz", "marketing", "reklama", "smm", "трфик", "trafik"),
-        "💡 Maslahat: biznes uchun eng yaxshi natija — mijoz yo'lini qisqartiradigan bot: "
-        "katalog → savatcha → buyurtma → to'lov → eslatma. SMM va CRM botlari bilan "
-        "mijozlarni qayta jalb qilishni avtomatlashtiring. Avval 1 ta oddiy botni ishga "
-        "tushirib, keyin kengaytiring.",
+        ("tuzilma", "structure", "komanda", "command", "qurish", "loyiha", "design", "bot yasash"),
+        "__special_blueprint__",
+    ),
+    (
+        ("monetizatsiya", "pul", "daromad", "earn", "money", "sotish", "foyda", "ishlatish"),
+        "💰 Monetizatsiya bo'yicha amaliy yo'nalishlar:\n"
+        "1) obuna/tarif (Standart 60,000 UZS, Ultra Pro 150,000 UZS);\n"
+        "2) har bir buyurtma yoki bron uchun komissiya;\n"
+        "3) reklama va hamkorlik (SMM, affiliate);\n"
+        "4) premium funksiyalar: AI tahlil, hisobot, avtomatik eslatma.\n\n"
+        "Avval bitta aniq 'og'riq'ni hal qiling — shunda odamlar to'lashga tayyor bo'ladi.",
+    ),
+    (
+        ("biznes", "business", "sotuv", "mijoz", "marketing", "reklama", "smm", "trafik"),
+        "💡 Biznes uchun eng ishonchli oqim: katalog → savatcha → buyurtma → to'lov → "
+        "eslatma. Mijozni bot ichida ushlab turish uchun 3 ta narsa kerak: tezkor javob, "
+        "aniq narx va keyingi qadamni ko'rsatadigan tugma. CRM va SMM botlari bilan "
+        "qayta sotuvni avtomatlashtiring.",
     ),
     (
         ("ai", "chatgpt", "sun'iy", "gpt", "assistent"),
-        "🧠 AI yordamchilar savol-javob, kontent yozish, tarjima va tahlil uchun juda foydali. "
-        "Bizda ChatGPT & AI kategoriyasida 12 ta tayyor shablon bor. Sizga qaysi vazifa "
-        "uchun AI kerak — yozib bering, shablon tanlashga yordam beraman.",
+        "🧠 AI bot yordamchilari savol-javob, kontent, tarjima va tahlil uchun foydali. "
+        "Tuzilma maslahati: /start → vazifa tanlash → natija → 'yana'/'tahrirlash' tugmalari. "
+        "Mini App ichidagi 'AI Bot Yasash' bo'limida shablon tanlab, tayyor komandalar "
+        "va sozlash bosqichlarini olishingiz mumkin.",
     ),
     (
         ("crypto", "kripto", "bitcoin", "trading", "invest"),
-        "₿ Crypto botlari narx kuzatish, portfel hisobi, signal va ogohlantirishlar uchun "
-        "ishlatiladi. Investitsiyada xavfni unutmang: avval demo rejimda sinab ko'ring. "
-        "Katalogda Crypto kategoriyasida 12 ta shablon mavjud.",
+        "₿ Crypto botlari narx kuzatish, portfel va ogohlantirish uchun yaxshi. "
+        "Tuzilma: /price, /portfolio, /alerts, /help. Monetizatsiya: obuna + signal "
+        "paketlari. Xavf haqida aniq ogohlantirish qo'shishni unutmang.",
     ),
     (
         ("yordam", "help", "nima qilasan", "кто ты", "who are you"),
-        "Men faqat maslahat beraman — botlarni avtomatik qurmayman. "
-        "Bot yaratish uchun /build yoki katalogdan shablon tanlang. "
-        "Savol yozsangiz, doim javob beraman.",
+        "Men faqat maslahat beraman — botlarni avtomatik yaratmayman. "
+        "Tayyor bot tuzilmasini Mini App ichidagi 'AI Bot Yasash' bo'limida oling. "
+        "Bu yerda esa g'oyangizni yozing: men loyiha, tuzilma va monetizatsiya bo'yicha "
+        "amaliy maslahat beraman.",
     ),
 ]
 
 AI_FALLBACKS = [
-    "🤖 Tushundim. Buning uchun avval maqsadni aniqlang: kimga xizmat qiladi, qanday "
-    "harakat bajaradi va natijani qayerda ko'rasiz? Keyin mos shablonni tanlash oson bo'ladi.",
-    "💡 Qisqa maslahat: oddiy boshlang — 3 ta tugma (Boshlash, Ma'lumot, Aloqa) va bitta "
-    "xush kelibsiz xabar. Keyin asta-sekin funksiya qo'shing.",
-    "📌 Buni katalogdagi tayyor shablonlar bilan ham hal qilish mumkin. /menu → Kutubxonaga "
-    "kiring yoki savolingizni batafsil yozing, men yo'nalish ko'rsataman.",
-    "🧠 Men sizga botlar, biznes va marketing bo'yicha maslahat beraman. "
-    "Savolni biroz konkretlashtirsangiz — aniqroq javob beraman.",
+    "🤖 Amaliy maslahat: avval bitta aniq vazifani tanlang. Menyu 3-4 tugmadan oshmasin: "
+    "Boshlash, Katalog/Ma'lumot, Buyurtma/Bron, Aloqa. Keyin foydalanuvchi yo'lini "
+    "1 daqiqada sinab ko'ring.",
+    "💡 Tuzilma bo'yicha: /start — tanishtirish, /menu — tugmalar, /help — yordam, "
+    "va bitta asosiy harakat komandasi. Har bir bosqichda keyingi qadamni ko'rsatadigan "
+    "tugma qo'ying.",
+    "💰 Monetizatsiya: avval bepul sinov, keyin obuna yoki buyurtma komissiyasi. "
+    "Foydalanuvchiga aniq foyda (vaqt tejash, xatolik kamaytirish) ko'rsatilsa, to'lov osonroq bo'ladi.",
+    "📌 G'oyangizni bir oz batafsil yozing — kimga mo'ljallangan, qanday harakat bajaradi, "
+    "qayerda ishlatiladi? Shunga qarab aniq tuzilma va monetizatsiya taklif qilaman.",
 ]
 
 
+def advisor_blueprint(text: str) -> str:
+    """Generate practical design/structure/monetization advice from a free-form idea."""
+    low = text.lower()
+    modules: List[str] = []
+    if any(w in low for w in ("do'kon", "savat", "buyurtma", "katalog", "mahsulot", "sotuv")):
+        modules.append("Katalog → Savatcha → Buyurtma → To'lov")
+    if any(w in low for w in ("bron", "uchrashuv", "buyurtma", "qabul", "serve", "restoran")):
+        modules.append("Sana vaqt tanlash → Bron tasdiqlash → Eslatma")
+    if any(w in low for w in ("faq", "ma'lumot", "savol", "javob", "yordam")):
+        modules.append("FAQ / Savol-javob bazasi")
+    if any(w in low for w in ("ai", "gpt", "tahlil", "tasvir", "text", "matn")):
+        modules.append("AI so'rov → Natija → Tahrirlash")
+    if any(w in low for w in ("crypto", "kripto", "narx", "portfel")):
+        modules.append("Narx/portfel → Ogohlantirish → Hisobot")
+    if not modules:
+        modules = ["Xush kelibsiz → Asosiy menyu → Ma'lumot", "Aloqa / Yordam"]
+
+    commands = [
+        "/start — bot bilan tanishtirish va asosiy tugmalar",
+        "/menu — doimiy menyuni qayta ko'rsatish",
+        "/help — foydalanish tartibi va yordam",
+        "/order — asosiy harakatni boshlash (buyurtma/bron/so'rov)",
+    ]
+    if any(w in low for w in ("admin", "hisobot", "statistika")):
+        commands.append("/admin — buyurtmalar va statistika (faqat egalari uchun)")
+
+    money = (
+        "Obuna (Standart 60,000 UZS / Ultra Pro 150,000 UZS), buyurtma komissiyasi "
+        "yoki premium funksiya (AI tahlil, avtomatik hisobot)."
+    )
+    return (
+        "🧠 <b>AI Bot Maslahatchi tuzilmasi</b>\n\n"
+        f"🎯 <b>Maqsad:</b> {esc(text[:180])}\n\n"
+        "1️⃣ <b>Foydalanuvchi oqimi</b>\n" + "\n".join(f"• {esc(m)}" for m in modules) + "\n\n"
+        "2️⃣ <b>Komandalar</b>\n" + "\n".join(f"• {esc(c)}" for c in commands) + "\n\n"
+        "3️⃣ <b>Asosiy tugmalar</b>\n• Boshlash • Katalog/Ma'lumot • Buyurtma/Bron • Aloqa\n\n"
+        f"4️⃣ <b>Monetizatsiya</b>\n• {money}\n\n"
+        "5️⃣ <b>Keyingi qadam</b>\n"
+        "Mini App → '🤖 AI Bot Yasash' bo'limida shu tuzilmani tanlab, tayyor komandalar "
+        "va sozlash bosqichlarini oling. Bot shu yerda faqat maslahat beradi."
+    )
+
+
 def ai_reply(text: str) -> str:
-    """Smart built-in advisor. Always returns an answer, no external API needed."""
+    """Smart built-in advisor. Always returns practical Uzbek advice."""
     lowered = text.lower()
     match = re.search(r"tpl_\d{3}", lowered)
     if match:
@@ -1378,13 +1320,28 @@ def ai_reply(text: str) -> str:
                 f"🧩 <b>{esc(template['name'])}</b> — {esc(template['category_name'])} kategoriyasidagi "
                 f"{'Premium' if template['is_premium'] else 'bepul'} shablon.\n\n"
                 f"{esc(template['description'])}\n\n"
-                "Maslahat: avval xush kelibsiz xabarini qisqa qiling, 3-4 ta asosiy tugma qo'ying "
-                "va bitta aniq harakatni (buyurtma, bron, ma'lumot) sinab ko'ring. "
-                "Standart yoki Ultra Pro bilan barcha shablonlar mavjud."
+                "Maslahat: xush kelibsiz xabarini qisqa qiling, 3-4 ta tugma qo'ying va "
+                "bitta aniq harakatni (buyurtma, bron, ma'lumot) sinab ko'ring. "
+                "Tayyor tuzilmani Mini App ichidagi 'AI Bot Yasash' bo'limida oling."
             )
     for keywords, reply in AI_RULES:
+        if reply == "__special_shablon__":
+            if any(w in lowered for w in ("shablon", "template", "katalog", "bot turi")):
+                return (
+                    f"🏪 Katalogda {db.template_count()} ta shablon, {len(db.categories())} kategoriya bor: "
+                    "E-commerce, ChatGPT & AI, SMM, Crypto va boshqalar. "
+                    "Mini App ichida shablonni tanlab, 'AI Bot Yasash' bo'limida uning "
+                    "asosida bot tuzilmasini oling."
+                )
+            continue
+        if reply == "__special_blueprint__":
+            if any(w in lowered for w in ("tuzilma", "structure", "komanda", "command", "qurish", "loyiha", "bot yasash")):
+                return advisor_blueprint(text)
+            continue
         if any(word in lowered for word in keywords):
             return reply
+    if len(text.strip()) >= 35:
+        return advisor_blueprint(text)
     return random.choice(AI_FALLBACKS)
 
 
@@ -1414,30 +1371,32 @@ async def direct_receipt_handler(update: Update, context: ContextTypes.DEFAULT_T
 
 
 async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Every text message gets practical bot-advisor advice."""
     user = update.effective_user
     db.ensure_user(user.id, user.username, user.first_name)
     if await receipt_handler(update, context):
         return
     text = (update.message.text or "").strip()
-    shortcuts = {
-        "🏪 kutubxona": "catalog",
-        "🤖 bot yasash": "build",
-        "💳 tariflar": "plans",
-        "📊 limitim": "usage",
-        "📦 botlarim": "mybots",
-        "❓ yordam": "help",
-    }
     key = text.lower()
-    if key in shortcuts:
-        view = shortcuts[key]
-        if view == "build":
-            await build_start(update, context)
-        else:
-            await send_view(update, context, view)
+    if key == "💎 tariflar":
+        await plans_command(update, context)
+        return
+    if key == "💳 to'lov / chek yuborish":
+        await check_command(update, context)
+        return
+    if key == "🤖 ai maslahatchi":
+        await ai_command(update, context)
+        return
+    if key == "🚀 bot yasash (mini app)":
+        await update.message.reply_text(
+            "🚀 Mini App tugmasi orqali bot tuzilmasini yarating. Bu yerda men faqat "
+            "maslahat beraman — g'oyangizni yozing.",
+            reply_markup=reply_main_keyboard(),
+        )
         return
     db.register_message(user.id)
     await update.message.reply_text(
-        ai_reply(text), parse_mode=ParseMode.HTML, reply_markup=main_menu_keyboard(user.id)
+        ai_reply(text), parse_mode=ParseMode.HTML, reply_markup=reply_main_keyboard()
     )
 
 
@@ -1451,12 +1410,8 @@ async def post_init(application: Application) -> None:
             BotCommand("menu", "Asosiy menyu"),
             BotCommand("ai", "AI Maslahatchi"),
             BotCommand("chek", "Chek yuborish"),
-            BotCommand("build", "Custom bot yaratish"),
-            BotCommand("request", "Maxsus bot buyurtmasi"),
             BotCommand("plans", "Tariflar va narxlar"),
-            BotCommand("usage", "Mening limitim"),
             BotCommand("admin", "Admin panel"),
-            BotCommand("cancel", "Quruvchidan chiqish"),
         ]
     )
     log.info(
@@ -1467,42 +1422,6 @@ async def post_init(application: Application) -> None:
 
 def build_application() -> Application:
     application = ApplicationBuilder().token(BOT_TOKEN).post_init(post_init).build()
-
-    request_conv = ConversationHandler(
-        entry_points=[
-            CommandHandler("request", request_start),
-            CallbackQueryHandler(request_start, pattern="^request$"),
-        ],
-        states={
-            R_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, request_name)],
-            R_CONTACT: [MessageHandler(filters.TEXT & ~filters.COMMAND, request_contact)],
-            R_DESC: [MessageHandler(filters.TEXT & ~filters.COMMAND, request_desc)],
-        },
-        fallbacks=[
-            CommandHandler("cancel", request_cancel),
-            CallbackQueryHandler(request_cancel, pattern="^request_cancel$"),
-        ],
-        per_message=False,
-    )
-
-    builder_conv = ConversationHandler(
-        entry_points=[
-            CommandHandler("build", build_start),
-            CallbackQueryHandler(build_start, pattern="^build$"),
-        ],
-        states={
-            B_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, build_name)],
-            B_WELCOME: [MessageHandler(filters.TEXT & ~filters.COMMAND, build_welcome)],
-            B_BUTTONS: [MessageHandler(filters.TEXT & ~filters.COMMAND, build_buttons)],
-            B_ANSWER: [MessageHandler(filters.TEXT & ~filters.COMMAND, build_answer)],
-            B_CONFIRM: [CallbackQueryHandler(build_save, pattern="^build_save$")],
-        },
-        fallbacks=[
-            CommandHandler("cancel", build_cancel),
-            CallbackQueryHandler(build_cancel, pattern="^build_cancel$"),
-        ],
-        per_message=False,
-    )
 
     admin_conv = ConversationHandler(
         entry_points=[
@@ -1519,8 +1438,6 @@ def build_application() -> Application:
         per_message=False,
     )
 
-    application.add_handler(request_conv)
-    application.add_handler(builder_conv)
     application.add_handler(admin_conv)
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("menu", menu_command))
@@ -1530,9 +1447,6 @@ def build_application() -> Application:
     application.add_handler(CommandHandler("plans", plans_command))
     application.add_handler(CommandHandler("usage", usage_command))
     application.add_handler(CommandHandler("admin", admin_command))
-    application.add_handler(
-        MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data_handler)
-    )
     application.add_handler(CallbackQueryHandler(callback_router))
     application.add_handler(
         MessageHandler(
