@@ -833,6 +833,11 @@ def build_application() -> Application:
 
 def main() -> None:
     log.info("Starting %s", BOT_NAME)
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        asyncio.set_event_loop(asyncio.new_event_loop())
+
     application = build_application()
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
